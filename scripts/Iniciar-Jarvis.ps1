@@ -15,7 +15,6 @@ $taskHermes = Join-Path $taskRoot 'runtime\bin\hermes.exe'
 $taskDesktopExe = Join-Path $taskRoot 'hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe'
 if ($Desktop -and $QueryFile) { throw 'Use Desktop para conversar na janela, ou QueryFile para tarefa única.' }
 if ($Desktop -and -not (Test-Path -LiteralPath $taskDesktopExe)) { throw 'Aplicativo desktop ainda não compilado. Consulte docs/USO.md.' }
-if ($Desktop -and (Get-Process Hermes -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $taskDesktopExe })) { throw 'A janela desktop já está aberta. Use a existente.' }
 if (-not $Workspace) { $Workspace = Join-Path $taskRoot 'workspace' }
 if ($QueryFile) { $QueryFile = (Resolve-Path -LiteralPath $QueryFile).Path }
 if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) { throw 'Pasta de trabalho ausente.' }
@@ -26,6 +25,12 @@ try {
     $taskExisting = $null
     try { $taskExisting = Invoke-RestMethod 'http://127.0.0.1:8081/v1/models' -TimeoutSec 2 } catch {}
     if ($taskExisting -and 'jarvis-local' -notin $taskExisting.data.id) { throw 'A porta 8081 está em uso por outro modelo.' }
+    if ($taskExisting) {
+        $taskProps = Invoke-RestMethod 'http://127.0.0.1:8081/props' -TimeoutSec 3
+        if ([int]$taskProps.default_generation_settings.n_ctx -lt 64000) {
+            throw 'O servidor existente tem contexto menor que 64000. Encerre o motor antigo do Jarvis antes de reiniciar; não reutilizar essa conexão.'
+        }
+    }
     if (-not $taskExisting) {
         New-Item -ItemType Directory -Force -Path (Join-Path $taskRoot 'logs') | Out-Null
         $taskArgs = @('-m', ('"' + $taskModel + '"'), '--alias', 'jarvis-local', '--host', '127.0.0.1', '--port', '8081', '-c', '64000', '-ngl', '99', '-b', '256', '-ub', '128', '-np', '1', '--jinja', '--reasoning-budget', '0', '--cache-type-k', 'q8_0', '--cache-type-v', 'q8_0')
@@ -63,4 +68,3 @@ try {
     if ($taskServer -and -not $taskServer.HasExited) { Stop-Process -Id $taskServer.Id }
     Set-Location -LiteralPath $taskPreviousLocation.Path
 }
-

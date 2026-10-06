@@ -7,9 +7,9 @@ Núcleo: entender, planejar e coordenar. Memória: preferências e contexto sepa
 
 ## Etapas
 1. Diagnosticar recursos e instalações existentes (concluído; detalhes mantidos localmente).
-2. Instalar e validar Hermes e modelo compacto por texto em português (em andamento).
-3. Testar ferramentas em tarefa simples e pequeno projeto.
-4. Personalizar nome, personalidade e interface Jarvis.
+2. Instalar e validar Hermes e modelo compacto por texto em português (concluído para núcleo básico).
+3. Testar ferramentas em tarefa simples e pequeno projeto (concluído: arquivos, edição, terminal e canal desktop).
+4. Personalizar nome, personalidade e interface Jarvis (em andamento: identidade e perfil prontos; aparência original Hermes).
 5. Expandir memória, agenda, voz e integrações conforme prioridade.
 
 ## Decisões

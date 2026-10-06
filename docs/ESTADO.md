@@ -1,42 +1,43 @@
 # Estado para retomada
 Atualizado em 06/10/2026.
 
-## Funciona
-Hermes instalado; versão, ajuda e integridade dos componentes básicos verificadas. Terminal e interface web compilados. Desktop e gateway não instalados. Qwen3.5-2B Q4_K_M baixado e SHA256 verificado.
-
-## Configuração
-Estrutura local: <JARVIS_ROOT>/hermes-agent (upstream), runtime (dados), models (modelo), project (este repositório), workspace (tarefas).
-Endpoint previsto: http://127.0.0.1:8081/v1; alias jarvis-local; contexto 64000, cache K/V q8_0; máximo 10 turnos e 180 segundos por execução. Curator pausado.
-
-## Validação atual
-Microsoft Visual C++ atualizado para 14.51.36247.0; instalador retornou 3010 (reinicialização recomendada), mas o motor CUDA b11370 passou em --version e iniciou sem reiniciar. Resposta direta em português recebida. Hermes exige contexto mínimo 64000 nesta versão; servidor ajustado e carregado com cerca de 3381 MiB de VRAM total em uso. Teste de ferramenta aprovado: Hermes criou teste-jarvis.txt com o conteúdo solicitado; arquivo conferido diretamente. A resposta curta apresentou imprecisão factual; qualidade ainda precisa ser avaliada.
-
 ## Uso e continuidade
-Retomada autorizada. Nova barreira: 65% restantes ou menos. Última consulta: 67% restantes.
+Retomada autorizada. Pausar aos 50% restantes ou menos. Última consulta: 56% restantes. Consultar limite entre marcos; não iniciar novas etapas após a barreira. Salvar estado ao pausar.
 
-## Marco validado
-Iniciador passou desde o carregamento do motor até a criação de site-teste/index.html, encerrando seu servidor ao terminar. HTML UTF-8 pt-BR, CSS Grid adaptável e nenhuma URL externa. Alternância claro/escuro passou em teste JavaScript com DOM simulado; sem inspeção visual em navegador. Conteúdo da página é demonstração gerada, não plano oficial. Cerca de 10064 bytes. Modo interativo ainda não verificado.
+## Funciona
+Hermes v0.21.5 instalado pelo PM, upstream 85db7c3a6886762773827598793b0b51ef4e3325 preservado. Qwen3.5-2B Q4_K_M baixado e hash verificado. Motor CUDA b11370, modelo local e ferramentas de arquivo/terminal testados. Aplicativo desktop compilado e aberto. Perfil default tem nome exibido Jarvis; identidade configurada por SOUL.md. Não há API paga obrigatória.
 
-## Identidade Jarvis
-config/SOUL.md aplicado ao runtime pelo mecanismo nativo do Hermes, com cópia de recuperação local da identidade anterior. Teste inicial inventou agenda/voz; após declarar capacidades reais, nova resposta identificou Jarvis/Hermes e informou corretamente que voz e agenda não estão conectadas. Isso corrige este teste, sem garantir ausência de alucinações. Nenhuma alteração no upstream.
+## Testes confirmados
+- Conversa direta em português; uma resposta teve imprecisão factual, então qualidade precisa de revisão.
+- Hermes criou arquivo e site HTML, e editou somente o h1 solicitado; comparação completa aprovou a edição.
+- Botão de tema passou em teste JavaScript com DOM simulado; não houve inspeção visual em navegador.
+- Projeto demonstracao tem AGENTS.md e ESTADO.md; leitura pela ferramenta identificou o objetivo correto.
+- Terminal calculou SHA256 que coincidiu com Get-FileHash.
+- Backend desktop ficou pronto após aproximadamente 44s e respondeu API/status.
+- Pelo canal WebSocket autenticado usado pelo desktop, Jarvis respondeu identidade correta e voz/agenda ausentes. Depois criou recado.txt com Operacao desktop validada; conteúdo conferido diretamente.
+- Cliques/interação visual do usuário na janela não foram automatizados. Evidência da janela veio do screenshot do usuário.
 
-## Edição e projetos
-Edição incremental aprovada: somente h1 mudou, comparado contra o arquivo inteiro anterior. Novo-Projeto.ps1 criou AGENTS.md e ESTADO.md por pasta. Memória padrão do Hermes é compartilhada pelo perfil; não equivale a isolamento. Iniciador recebe lista de ferramentas e normaliza vírgulas. Abertura/saída interativa testadas; conversa via terminal automatizado não concluída. Telemetria opcional desativada.
+## Configuração funcional
+Pastas irmãs em <JARVIS_ROOT>: hermes-agent, runtime, models, project, workspace, logs.
+Endpoint 127.0.0.1:8081/v1; alias jarvis-local; contexto REAL 64000, cache K/V q8_0; max_turns 10, run_budget_seconds 180. agent.execution_guidance=true; agent.tool_use_enforcement=false; platform_toolsets.cli=[file, terminal]. Curator e métricas compartilhadas pausado/desativadas respectivamente.
+config/SOUL.md aplicado em runtime/SOUL.md; cópia de recuperação preservada. Script Aplicar-Configuracao.ps1 reproduz essas opções pelo CLI oficial (sintaxe verificada; aplicação completa do script ainda não executada).
 
-## Aplicativo desktop
-Build desktop concluído: hermes-agent/apps/desktop/release/win-unpacked/Hermes.exe. Iniciador com -Desktop iniciou o aplicativo oficial e o servidor local; health retornou ok. Processo principal do app verificado. Interface não inspecionada e conversa pela janela ainda NÃO validada. Janela conserva marca Hermes; identidade conversacional é Jarvis. Iniciador aguarda o processo principal e encerra apenas seu próprio servidor quando o app fecha. O site anterior era uma tarefa de teste, não a interface do Jarvis.
+## Problemas resolvidos e limites
+Visual C++ atualizado para 14.51.36247.0 corrigiu 0xc0000005; instalador recomendou reinicialização, mas motor funcionou sem ela.
+O processo antigo na porta 8081 servia 16384 tokens apesar da configuração Hermes 64000. Foi substituído; /props confirmou 64000. Iniciador agora verifica contexto real antes de reutilizar servidor.
+WebSocket exige credencial local do registro de rendezvous; teste sem ela falhou. Credencial nunca publicada nem impressa.
+Forçar tool_use_enforcement=true levou a ferramentas/pesquisas desnecessárias para pergunta simples. false e conjunto essencial corrigiram o teste.
+Memória nativa é compartilhada pelo perfil; arquivos por projeto são organização, não sandbox. Voz, agenda e Alexa não instaladas/conectadas. Marca visual/executável ainda Hermes; identidade e perfil são Jarvis.
 
-## Evidência da janela
-Imagem do usuário: app abriu e está em 86% da inicialização, aguardando o backend Hermes. Esse percentual é do app, não do limite. Logs confirmaram backend desktop pronto em 44 segundos e conexões WebSocket da interface aceitas; o screenshot capturou espera inicial. Modelo llama-server responde health ok. Conversa pela janela não validada.
-
-## Validações após retomada
-Backend desktop ficou pronto em aproximadamente 44 segundos; API status respondeu versão 0.21.5. Leitura de ESTADO.md por ferramenta e objetivo do projeto confirmados. Pedido inicial de cálculo não acionou terminal. Orientações nativas agent.execution_guidance e agent.tool_use_enforcement configuradas como true (alias jarvis-local não identifica a família do modelo no modo auto). Teste seguinte acionou terminal e SHA256 retornado coincidiu exatamente com Get-FileHash. Perfil default recebeu display_name Jarvis pelo CLI nativo; id permanece default. Esses testes não garantem seguimento perfeito de instruções.
+## Operação
+scripts/Iniciar-Jarvis.ps1 -Desktop abre a janela e mantém o servidor criado por ele até fechar o app. Preserva servidor externo existente. Sem Desktop, modo CLI. QueryFile executa pedido único; Workspace escolhe projeto; Toolsets aceita lista.
+scripts/Novo-Projeto.ps1 cria pasta em workspace/projetos e registros sem sobrescrever projeto existente. Atalho local Jarvis.lnk foi criado em outputs e lançado; logs confirmaram relaunch da instância existente sem duplicação. Ver docs/USO.md.
 
 ## Próxima ação
-Verificar a janela desktop e conversar nela usando jarvis-local. Não reconstruir o app sem necessidade. Depois testar ferramentas selecionadas por lista e leitura do contexto AGENTS.md do projeto. Atualizar marca da interface por extensão/patch documentado, preservando origem Hermes. Agenda e voz continuam ausentes.
+Fase 3 básica concluída. Usuário foi avisado de que chegamos à personalização visual; aguardar seus modelos antes de começar front-end/aparência, conforme instrução explícita. Base atual pode ser usada. Próximo teste útil: tarefa real do usuário, evitando repetir testes já aprovados. Depois priorizar memória, agenda ou voz sem ampliar tudo simultaneamente.
 
 ## GitHub
-Repositório: https://github.com/razielbaltazar/Jarvis
-Documentação pública sem credenciais, arquivos pessoais ou diagnóstico detalhado. Estrutura inicial publicada e sincronizada com a cópia local. Este arquivo registra a próxima ação para continuidade.
+https://github.com/razielbaltazar/Jarvis é público. Não enviar runtime, modelos, credenciais, logs ou dados pessoais. Sincronizar mudanças de scripts/documentação deste marco; commits locais anteriores foram preservados em branches de recuperação.
 
-Núcleo local básico operacional; Jarvis completo ainda em desenvolvimento. Ultron é visão futura, sem pendências atuais.
+## Ultron
+Visão futura, sem tarefas atuais.
