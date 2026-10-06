@@ -1,0 +1,31 @@
+# Dados locais e segredos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*
+secrets*
+config.local.*
+# Dependências e arquivos grandes
+runtime/
+models/
+hermes-agent/
+cache/
+logs/
+workspace/
+work/
+outputs/
+.venv/
+venv/
+node_modules/
+__pycache__/
+*.pyc
+*.gguf
+*.exe
+*.dll
+*.zip
+*.log
+*.sqlite*
+*.db
+.DS_Store
