@@ -12,13 +12,16 @@ Endpoint previsto: http://127.0.0.1:8081/v1; alias jarvis-local; contexto 64000,
 Microsoft Visual C++ atualizado para 14.51.36247.0; instalador retornou 3010 (reinicialização recomendada), mas o motor CUDA b11370 passou em --version e iniciou sem reiniciar. Resposta direta em português recebida. Hermes exige contexto mínimo 64000 nesta versão; servidor ajustado e carregado com cerca de 3381 MiB de VRAM total em uso. Teste de ferramenta aprovado: Hermes criou teste-jarvis.txt com o conteúdo solicitado; arquivo conferido diretamente. A resposta curta apresentou imprecisão factual; qualidade ainda precisa ser avaliada.
 
 ## Uso e continuidade
-Retomada autorizada. Pausar em 70% restantes ou menos; 81% restantes na consulta atual. Pausa anterior corrigida após esclarecimento do usuário.
+Retomada autorizada. Pausar em 70% restantes ou menos; 79% restantes na consulta atual. Pausa anterior corrigida após esclarecimento do usuário.
 
 ## Marco validado
 Iniciador passou desde o carregamento do motor até a criação de site-teste/index.html, encerrando seu servidor ao terminar. HTML UTF-8 pt-BR, CSS Grid adaptável e nenhuma URL externa. Alternância claro/escuro passou em teste JavaScript com DOM simulado; sem inspeção visual em navegador. Conteúdo da página é demonstração gerada, não plano oficial. Cerca de 10064 bytes. Modo interativo ainda não verificado.
 
+## Identidade Jarvis
+config/SOUL.md aplicado ao runtime pelo mecanismo nativo do Hermes, com cópia de recuperação local da identidade anterior. Teste inicial inventou agenda/voz; após declarar capacidades reais, nova resposta identificou Jarvis/Hermes e informou corretamente que voz e agenda não estão conectadas. Isso corrige este teste, sem garantir ausência de alucinações. Nenhuma alteração no upstream.
+
 ## Próxima ação
-Personalizar identidade Jarvis por configuração/extensão suportada, preservando Hermes upstream; validar modo interativo. Depois avaliar tarefa de edição incremental e memória por projeto. Evitar ampliar ferramentas antes disso.
+Validar modo interativo e edição incremental de projeto. Estabelecer contexto por projeto e inventário verificável de capacidades antes de agenda/voz. Interface ainda tem elementos originais Hermes; SOUL.md altera a identidade conversacional.
 
 ## GitHub
 Repositório: https://github.com/razielbaltazar/Jarvis
