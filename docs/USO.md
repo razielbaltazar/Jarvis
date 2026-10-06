@@ -23,3 +23,10 @@ Aplicar-Configuracao.ps1 usa o CLI oficial para aplicar modelo/endpoint/contexto
 AGENTS.md e ESTADO.md organizam contexto por pasta. São orientação ao agente, não sandbox nem garantia de sigilo. A memória nativa do Hermes é compartilhada pelo perfil; use arquivos do projeto para detalhes específicos. Integrações de agenda e voz ainda não estão conectadas. O modelo pequeno pode inventar fatos: valide resultados relevantes.
 
 Durante o desenvolvimento assistido, pausar quando a barra de uso restante chegar a 50% ou menos. Essa regra é acompanhada pelo assistente de desenvolvimento, não pelo modelo local.
+# Interface Jarvis
+
+O atalho Jarvis abre agora a interface própria: orbe azul, conversa abaixo e painéis Sistema/Atividade recolhidos. Clique na orbe ou em Conversa para abrir o histórico da janela. Escreva no campo inferior e pressione Enter. Interromper solicita cancelamento ao Hermes. Reconectar fica disponível após perda de conexão.
+
+Sistema consulta RAM e GPU reais; Atividade mostra ferramentas da sessão. Voz e agenda ainda não conectadas. Fechar painéis não encerra o trabalho. A última conversa da mesma pasta é retomada automaticamente ao reabrir. O histórico pode ser aberto pelo botão Conversa. Seleção entre múltiplas conversas ainda não implementada.
+
+Para recuperação, scripts/Iniciar-Jarvis.ps1 -HermesDesktop abre a interface original. O novo aplicativo é uma versão de desenvolvimento usando o Electron já instalado; empacotamento independente será uma etapa posterior.

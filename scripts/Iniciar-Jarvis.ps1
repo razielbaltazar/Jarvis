@@ -2,7 +2,8 @@ param(
     [string]$QueryFile,
     [string]$Workspace,
     [string[]]$Toolsets = @('file', 'terminal'),
-    [switch]$Desktop
+    [switch]$Desktop,
+    [switch]$HermesDesktop
 )
 
 $ErrorActionPreference = 'Stop'
@@ -13,9 +14,13 @@ $env:HERMES_HOME = Join-Path $taskRoot 'runtime'
 $taskModel = Join-Path $taskRoot 'models\Qwen3.5-2B-Q4_K_M.gguf'
 $taskHermes = Join-Path $taskRoot 'runtime\bin\hermes.exe'
 $taskDesktopExe = Join-Path $taskRoot 'hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe'
+$taskElectron = Join-Path $taskRoot 'hermes-agent\apps\desktop\node_modules\electron\dist\electron.exe'
+if ($HermesDesktop) { $Desktop = $true }
 if ($Desktop -and $QueryFile) { throw 'Use Desktop para conversar na janela, ou QueryFile para tarefa única.' }
-if ($Desktop -and -not (Test-Path -LiteralPath $taskDesktopExe)) { throw 'Aplicativo desktop ainda não compilado. Consulte docs/USO.md.' }
+if ($Desktop -and $HermesDesktop -and -not (Test-Path -LiteralPath $taskDesktopExe)) { throw 'Aplicativo desktop ainda não compilado. Consulte docs/USO.md.' }
+if ($Desktop -and -not $HermesDesktop -and -not (Test-Path -LiteralPath $taskElectron)) { throw 'Runtime desktop ausente. Consulte docs/USO.md.' }
 if (-not $Workspace) { $Workspace = Join-Path $taskRoot 'workspace' }
+$env:JARVIS_WORKSPACE = $Workspace
 if ($QueryFile) { $QueryFile = (Resolve-Path -LiteralPath $QueryFile).Path }
 if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) { throw 'Pasta de trabalho ausente.' }
 $taskEngine = Get-ChildItem -LiteralPath (Join-Path $taskRoot 'runtime\tools') -Directory -Filter 'llamacpp-cuda-*' | ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Filter 'llama-server.exe' -Recurse -File } | Select-Object -First 1
@@ -44,7 +49,11 @@ try {
         if (-not $taskReady) { throw 'O modelo não ficou pronto dentro do prazo.' }
     }
     Set-Location -LiteralPath $Workspace
-    if ($Desktop) {
+    if ($Desktop -and -not $HermesDesktop) {
+        $taskJarvisProcess = Start-Process -FilePath $taskElectron -ArgumentList ('"' + (Join-Path $taskRoot 'project\desktop') + '"') -WindowStyle Hidden -PassThru
+        $taskJarvisProcess.WaitForExit()
+        $LASTEXITCODE = $taskJarvisProcess.ExitCode
+    } elseif ($Desktop) {
         & $taskHermes desktop --skip-build --local --hermes-root (Join-Path $taskRoot 'hermes-agent') --cwd $Workspace
         if ($LASTEXITCODE -ne 0) { throw "Desktop terminou com código $LASTEXITCODE." }
         $taskDesktopProcess = $null
