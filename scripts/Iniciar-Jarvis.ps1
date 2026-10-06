@@ -12,7 +12,7 @@ try {
     if ($taskExisting -and 'jarvis-local' -notin $taskExisting.data.id) { throw 'A porta 8081 está em uso por outro modelo.' }
     if (-not $taskExisting) {
         New-Item -ItemType Directory -Force -Path (Join-Path $taskRoot 'logs') | Out-Null
-        $taskArgs = @('-m', ('"' + $taskModel + '"'), '--alias', 'jarvis-local', '--host', '127.0.0.1', '--port', '8081', '-c', '16384', '-ngl', '99', '-b', '256', '-ub', '128', '-np', '1', '--jinja', '--reasoning-budget', '0')
+        $taskArgs = @('-m', ('"' + $taskModel + '"'), '--alias', 'jarvis-local', '--host', '127.0.0.1', '--port', '8081', '-c', '64000', '-ngl', '99', '-b', '256', '-ub', '128', '-np', '1', '--jinja', '--reasoning-budget', '0', '--cache-type-k', 'q8_0', '--cache-type-v', 'q8_0')
         $taskServer = Start-Process -FilePath $taskEngine.FullName -ArgumentList $taskArgs -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskRoot 'logs\modelo-out.log') -RedirectStandardError (Join-Path $taskRoot 'logs\modelo-error.log')
         $taskReady = $false
         for ($taskAttempt = 0; $taskAttempt -lt 60; $taskAttempt++) {
