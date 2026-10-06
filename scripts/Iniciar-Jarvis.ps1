@@ -1,15 +1,21 @@
 param(
     [string]$QueryFile,
     [string]$Workspace,
-    [string]$Toolsets = 'file,terminal,memory'
+    [string[]]$Toolsets = @('file', 'terminal'),
+    [switch]$Desktop
 )
 
 $ErrorActionPreference = 'Stop'
 $taskPreviousLocation = Get-Location
+$taskToolsets = $Toolsets -join ','
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
 $env:HERMES_HOME = Join-Path $taskRoot 'runtime'
 $taskModel = Join-Path $taskRoot 'models\Qwen3.5-2B-Q4_K_M.gguf'
 $taskHermes = Join-Path $taskRoot 'runtime\bin\hermes.exe'
+$taskDesktopExe = Join-Path $taskRoot 'hermes-agent\apps\desktop\release\win-unpacked\Hermes.exe'
+if ($Desktop -and $QueryFile) { throw 'Use Desktop para conversar na janela, ou QueryFile para tarefa única.' }
+if ($Desktop -and -not (Test-Path -LiteralPath $taskDesktopExe)) { throw 'Aplicativo desktop ainda não compilado. Consulte docs/USO.md.' }
+if ($Desktop -and (Get-Process Hermes -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $taskDesktopExe })) { throw 'A janela desktop já está aberta. Use a existente.' }
 if (-not $Workspace) { $Workspace = Join-Path $taskRoot 'workspace' }
 if ($QueryFile) { $QueryFile = (Resolve-Path -LiteralPath $QueryFile).Path }
 if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) { throw 'Pasta de trabalho ausente.' }
@@ -33,11 +39,24 @@ try {
         if (-not $taskReady) { throw 'O modelo não ficou pronto dentro do prazo.' }
     }
     Set-Location -LiteralPath $Workspace
-    if ($QueryFile) {
-        & $taskHermes chat --cli -Q --oneshot -t $Toolsets --checkpoints --query-file $QueryFile
+    if ($Desktop) {
+        & $taskHermes desktop --skip-build --local --hermes-root (Join-Path $taskRoot 'hermes-agent') --cwd $Workspace
+        if ($LASTEXITCODE -ne 0) { throw "Desktop terminou com código $LASTEXITCODE." }
+        $taskDesktopProcess = $null
+        for ($taskAttempt = 0; $taskAttempt -lt 20; $taskAttempt++) {
+            $taskDesktopRoot = Get-CimInstance Win32_Process -Filter "Name = 'Hermes.exe'" | Where-Object { $_.ExecutablePath -eq $taskDesktopExe -and $_.CommandLine -notmatch '--type=' } | Select-Object -First 1
+            $taskDesktopProcess = if ($taskDesktopRoot) { Get-Process -Id $taskDesktopRoot.ProcessId -ErrorAction SilentlyContinue } else { $null }
+            if ($taskDesktopProcess) { break }
+            Start-Sleep -Milliseconds 500
+        }
+        if (-not $taskDesktopProcess) { throw 'O aplicativo não permaneceu aberto.' }
+        Write-Host 'Jarvis desktop aberto. Feche a janela para encerrar o modelo iniciado por este script.'
+        $taskDesktopProcess.WaitForExit()
+    } elseif ($QueryFile) {
+        & $taskHermes chat --cli -Q --oneshot -t $taskToolsets --checkpoints --query-file $QueryFile
     } else {
         Write-Host 'Jarvis local pronto. Use /exit para sair.'
-        & $taskHermes chat --cli -t $Toolsets --checkpoints
+        & $taskHermes chat --cli -t $taskToolsets --checkpoints
     }
     if ($LASTEXITCODE -ne 0) { throw "Hermes terminou com código $LASTEXITCODE." }
 } finally {

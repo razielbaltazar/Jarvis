@@ -11,7 +11,7 @@ Commit validado da instalação: 85db7c3a6886762773827598793b0b51ef4e3325
 Licença upstream: MIT; preservar avisos ao incorporar código.
 
 ## Estado
-Base Hermes e modelo local funcionando. Iniciador validado em execução não interativa: carrega o motor, executa tarefa e encerra o servidor. Hermes criou arquivo e um site HTML local. Interface interativa, qualidade ampla e integrações ainda em validação. Não enviar modelos, executáveis, logs, ambientes ou credenciais para GitHub.
+Base Hermes e modelo local funcionando. Iniciador validado em execução não interativa: carrega o motor, executa tarefa e encerra o servidor. Hermes criou arquivo e um site HTML local. Aplicativo desktop compilado e iniciado; conversa pela janela, qualidade ampla e integrações ainda em validação. Veja docs/USO.md. Não enviar modelos, executáveis, logs, ambientes ou credenciais para GitHub.
 
 ## Visão futura
 Ultron é uma evolução posterior, não requisito desta versão.
