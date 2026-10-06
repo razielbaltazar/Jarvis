@@ -16,6 +16,6 @@ Atualizar Visual C++ oficial, repetir verificação do motor, iniciar modelo e t
 
 ## GitHub
 Repositório: https://github.com/razielbaltazar/Jarvis
-Documentação pública sem credenciais, arquivos pessoais ou diagnóstico detalhado. Commit e envio desta etapa em preparação; confirmar remoto antes de declarar sincronização.
+Documentação pública sem credenciais, arquivos pessoais ou diagnóstico detalhado. Estrutura inicial publicada e sincronizada com a cópia local. Este arquivo registra a próxima ação para continuidade.
 
 O Jarvis ainda não está operacional. Ultron é visão futura, sem pendências atuais.
