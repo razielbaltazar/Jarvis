@@ -184,7 +184,19 @@ async function audioRequest(route,payload) {
   if(!response.ok||!result.ok)throw new Error(result.detail||'Falha no áudio local.');
   return result;
 }
-ipcMain.handle('jarvis:calendar',event=>{trusted(event);const file=path.join(root,'runtime/calendar/snapshot.json');if(!fs.existsSync(file))return {events:[],connected:false};if(fs.statSync(file).size>10000000)throw Error('Agenda excede o limite local.');const data=JSON.parse(fs.readFileSync(file,'utf8'));if(data.version!==1||!Array.isArray(data.events))throw Error('Agenda inválida.');return {...data,connected:true};});
+ipcMain.handle('jarvis:calendar',(event,options={})=>{
+  trusted(event);
+  const now=new Date(),from=options?.past?new Date(now.getTime()-30*86400000):now;
+  return new Promise((resolve,reject)=>{
+    const python=fs.readdirSync(path.join(root,'runtime/tools')).find(name=>name.startsWith('python-'));
+    const child=spawn(path.join(root,'runtime/tools',python,'python.exe'),['-I',path.join(root,'project/scripts/calendar_sync.py')],{windowsHide:true,env:runtimeEnv,stdio:['pipe','pipe','ignore']});
+    let output='';const timer=setTimeout(()=>{child.kill();reject(Error('A consulta da agenda demorou demais.'));},30000);
+    child.stdout.on('data',chunk=>{output+=chunk.toString();if(output.length>1000000){child.kill();reject(Error('Resposta da agenda excedeu o limite.'));}});
+    child.on('error',error=>{clearTimeout(timer);reject(error);});
+    child.on('close',code=>{clearTimeout(timer);if(code!==0)return reject(Error('Não foi possível consultar a agenda.'));try{resolve(JSON.parse(output));}catch{reject(Error('Resposta inválida da agenda.'));}});
+    child.stdin.on('error',()=>{});child.stdin.end(JSON.stringify({action:'list',from:from.toISOString()}));
+  });
+});
 ipcMain.handle('jarvis:voice-status',async event=>{trusted(event);await connect();return request('voice.toggle',{action:'status'});});
 ipcMain.handle('jarvis:record',async(event,action)=>{
   trusted(event);if(!['start','stop','cancel'].includes(action))throw new Error('Ação de voz inválida.');
