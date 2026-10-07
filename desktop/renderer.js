@@ -49,8 +49,8 @@ async function speak(text){
   await playback.play();
  }catch(error){if(generation!==speechGeneration)return;endVoice();state('ready');log('Voz: '+error.message);}
 }
-function panel(id,show){if(show)for(const other of ['system','activity','tasks','conversation'])if(other!==id)panel(other,false);$(id).hidden=!show;const toggle=$(id==='conversation'?'chat-toggle':id+'-toggle');toggle?.setAttribute('aria-expanded',String(show));if(id==='conversation')$('orb').setAttribute('aria-expanded',String(show));}
-for(const [button,id] of [['system-toggle','system'],['activity-toggle','activity'],['chat-toggle','conversation'],['orb','conversation'],['tasks-toggle','tasks']]) $(button).addEventListener('click',()=>{panel(id,$(id).hidden);if(id==='system'&&!$(id).hidden) resources();if(id==='tasks'&&!$(id).hidden)refreshTasks();});
+function panel(id,show){if(show)for(const other of ['system','activity','tasks','conversation','calendar'])if(other!==id)panel(other,false);$(id).hidden=!show;const toggle=$(id==='conversation'?'chat-toggle':id+'-toggle');toggle?.setAttribute('aria-expanded',String(show));if(id==='conversation')$('orb').setAttribute('aria-expanded',String(show));}
+for(const [button,id] of [['system-toggle','system'],['activity-toggle','activity'],['chat-toggle','conversation'],['orb','conversation'],['tasks-toggle','tasks'],['calendar-toggle','calendar']]) $(button).addEventListener('click',()=>{panel(id,$(id).hidden);if(id==='system'&&!$(id).hidden) resources();if(id==='tasks'&&!$(id).hidden)refreshTasks();if(id==='calendar'&&!$(id).hidden)refreshCalendar();});
 document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>panel(button.dataset.close,false)));
 let idle;
 function interaction(){clearTimeout(idle);idle=setTimeout(()=>{for(const id of ['system','activity'])if(!$(id).contains(document.activeElement))panel(id,false);},20000);}
@@ -136,3 +136,9 @@ try{$('input').value=localStorage.getItem('jarvis-input-draft')||'';}catch{}
 $('input').addEventListener('input',()=>localStorage.setItem('jarvis-input-draft',$('input').value));
 window.addEventListener('beforeunload',()=>localStorage.setItem('jarvis-input-draft',$('input').value));
 renderQueue();connect();
+
+async function refreshCalendar(){try{const data=await window.jarvis.calendar();$('calendar-items').replaceChildren();$('calendar-info').textContent=data.connected?'Cópia importada em '+new Date(data.imported_at).toLocaleString('pt-BR')+' · sem sincronização automática.'+(data.warnings?.length?' Há eventos não importados; consulte a agenda original.':''):'Agenda ainda não importada.';
+ const rows=(data.events||[]).filter(x=>$('calendar-past').checked||new Date(x.end||x.start).getTime()>=Date.now()).slice(0,50);
+ for(const item of rows){const row=document.createElement('p');row.className='message';const title=document.createElement('b');title.textContent=item.title;const when=document.createElement('span');when.textContent=item.all_day?item.start.split('-').reverse().join('/')+' · dia inteiro':new Date(item.start).toLocaleString('pt-BR');row.append(title,when);$('calendar-items').append(row);}if(!rows.length)$('calendar-items').textContent='Nenhum compromisso encontrado neste período na cópia local.';
+}catch(error){$('calendar-info').textContent='Não foi possível consultar a cópia da agenda: '+error.message;}}
+$('calendar-past').addEventListener('change',refreshCalendar);

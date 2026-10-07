@@ -2,7 +2,7 @@
 Atualizado em 07/10/2026. Etapa 5 do plano: memória, voz e integrações; núcleo e HUD funcionais, consolidação da primeira versão utilizável.
 
 ## Limite e escopo
-Pausar em 60% restantes (40% consumidos), conforme autorização atual. Consultar entre marcos, sem gastar para atingir a barreira. WhatsApp e redes sociais excluídos da autorização para agir como usuário. Código/documentação podem ser sincronizados no GitHub; nunca publicar runtime, credenciais, logs ou dados pessoais.
+Pausar em 50% restantes (50% consumidos), conforme autorização atual. Consultar entre marcos, sem gastar para atingir a barreira. WhatsApp e redes sociais excluídos da autorização para agir como usuário. Código/documentação podem ser sincronizados no GitHub; nunca publicar runtime, credenciais, logs ou dados pessoais.
 
 ## Funciona e foi verificado
 - Hermes v0.21.5 separado, sem alterações upstream; Electron com HUD, ícone Jarvis e iniciador oculto. Atalho verificado em C:/Users/razie/Desktop/Jarvis.lnk. Duas aberturas pelo atalho mantiveram um processo normal.
@@ -27,3 +27,12 @@ Piper GPLv3, dataset da voz declarado CC0; conferir distribuição na etapa come
 
 ## Próxima ação
 Validar voz física quando usuário puder. Depois integrar Google Calendar (antes de Apple) com autorização própria do Jarvis; conexão do Codex não é automaticamente transferida ao app. Refinar resultados de arquivos/código e testes de aprovação/cancelamento conforme tarefas reais. Busto de luz opcional futuro. Sem conselho de agentes, autoedição ou Ultron nesta etapa.
+
+## Preparação Calendar e revisão posterior
+Adaptador scripts/calendar_setup.py reutiliza setup Google do Hermes e restringe SCOPES a Calendar. --check retornou NOT_AUTHENTICATED; cliente e token ausentes. Nenhuma agenda acessada ou evento alterado. docs/GOOGLE-CALENDAR.md guarda continuação. docs/REVISAO.md avalia funcionamento, UX, segurança, desempenho e manutenção sem aplicar melhorias da revisão. User reforçou critérios visuais, para executar apenas na etapa apropriada.
+
+## Bloqueio concreto Google Cloud
+Navegador Chrome chegou à conta Google autenticada. Cloud bloqueou acesso por verificação em duas etapas desativada. Página de segurança aberta para o usuário ativar pessoalmente; regra da ferramenta exige hand-off para alteração de credencial/autenticação. Não contornar. Depois da ativação, atualizar Cloud e continuar configuração OAuth Calendar; usuário autorizou operar na sua conta. Nenhum projeto/cliente OAuth criado e nenhum evento alterado. Nova barreira 50% restantes.
+
+## Alternativa sem mudar a segurança da conta
+Usuário recusou ativar 2SV; respeitar essa decisão. Abas de segurança fechadas, nenhuma configuração de autenticação alterada. Exportação Google Calendar via navegador funcionou; ZIP pessoal permanece em Downloads, fora do Git. scripts/import_calendar.py importou 2 eventos, sem recorrência, para runtime/calendar/snapshot.json privado. Painel Agenda consulta apenas a cópia local, com data de importação e opção de mostrar anteriores. Não é sincronização automática nem integração de escrita. Sem enviar eventos ao Gemini. Recorrências/instâncias recorrentes são ignoradas com aviso explícito; desconhecimento de data/fuso também gera aviso. Parser e renderer passaram (17 verificações). Calendar bridge autenticada somente no processo principal. Dependências Google foram sincronizadas via PM oficial; pode restar pasta .previous-python em uso até encerrar processos antigos; não apagar à força. OAuth segue preparado como opção, bloqueado sem 2SV na conta Cloud.

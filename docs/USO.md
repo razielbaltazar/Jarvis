@@ -29,3 +29,6 @@ Você pode digitar enquanto o Jarvis trabalha. Enter guarda na fila; Enviar agor
 O modelo padrão atual é Gemini 3.1 Flash-Lite, que precisa de internet. O Qwen local continua instalado. A chave fica somente no ambiente privado.
 
 O atalho Jarvis está na área de trabalho. No painel Sistema, ONLINE indica Gemini; LOCAL indica o modelo local. Se um registro estiver em uso, espere e tente novamente. Se o aviso persistir após falha do programa, preserve os dados e solicite recuperação do bloqueio.
+
+## Agenda local
+Abra Agenda para consultar a cópia importada do Google. Ative Mostrar compromissos anteriores para ver eventos passados. A data de importação aparece no painel. Mudanças feitas no Google não atualizam essa cópia automaticamente. Não há edição Google por esse painel; eventos recorrentes ainda exigem consulta à agenda original.

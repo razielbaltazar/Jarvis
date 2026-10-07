@@ -1,5 +1,6 @@
 const {contextBridge, ipcRenderer} = require('electron');
 contextBridge.exposeInMainWorld('jarvis', Object.freeze({
+  calendar: () => ipcRenderer.invoke('jarvis:calendar'),
   connect: () => ipcRenderer.invoke('jarvis:connect'),
   send: text => ipcRenderer.invoke('jarvis:send', text),
   interrupt: () => ipcRenderer.invoke('jarvis:interrupt'),

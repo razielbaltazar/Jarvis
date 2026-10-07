@@ -20,3 +20,5 @@ header{height:66px;display:flex;align-items:center;justify-content:space-between
 }
 
 @media(max-width:900px),(max-height:650px){.panel{top:20px}body:has(.panel:not([hidden])) .orb-area{opacity:.15;pointer-events:none}}
+
+#calendar{overflow:auto}#calendar-past{width:auto;margin-right:8px}#calendar-items{overflow:auto}

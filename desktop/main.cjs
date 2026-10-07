@@ -184,6 +184,7 @@ async function audioRequest(route,payload) {
   if(!response.ok||!result.ok)throw new Error(result.detail||'Falha no áudio local.');
   return result;
 }
+ipcMain.handle('jarvis:calendar',event=>{trusted(event);const file=path.join(root,'runtime/calendar/snapshot.json');if(!fs.existsSync(file))return {events:[],connected:false};if(fs.statSync(file).size>10000000)throw Error('Agenda excede o limite local.');const data=JSON.parse(fs.readFileSync(file,'utf8'));if(data.version!==1||!Array.isArray(data.events))throw Error('Agenda inválida.');return {...data,connected:true};});
 ipcMain.handle('jarvis:voice-status',async event=>{trusted(event);await connect();return request('voice.toggle',{action:'status'});});
 ipcMain.handle('jarvis:record',async(event,action)=>{
   trusted(event);if(!['start','stop','cancel'].includes(action))throw new Error('Ação de voz inválida.');
