@@ -5,7 +5,9 @@ Abra o atalho Jarvis ou execute scripts/Iniciar-Jarvis.ps1 -Desktop. Aguarde a c
 O aplicativo usa Hermes com Qwen3.5-2B Q4_K_M local. Não exige API paga. A última conversa da mesma pasta é retomada ao reabrir. O modelo pequeno pode errar fatos ou confirmar ações que não executou; resultados importantes precisam de conferência.
 
 ## Voz e tarefas
-Microfone: clique para iniciar a captura; a transcrição fica no campo para revisão e envio manual. Ouvir resposta gera voz local. A opção de ler automaticamente vem desligada. Geração e transcrição de arquivo passaram nos testes; microfone físico ainda precisa ser conferido com o usuário.
+Clique uma vez em ◉ ou escreva "ative o modo voz" / "quero conversar por voz". Fale e faça uma pausa: a transcrição é enviada automaticamente, o Jarvis responde em voz alta e volta a ouvir ao terminar. Clique em ■ para encerrar, inclusive durante transcrição/processamento. O microfone fica pausado durante a resposta para evitar eco. O modo vem desligado ao abrir. Erros e silêncio prolongado encerram o modo, evitando ciclos sem fim. O processamento é local e pode levar alguns segundos; ainda não há interrupção automática da resposta pela sua fala.
+
+O ciclo passou em teste de interface com áudio/microfone simulados; síntese e transcrição locais reais foram validadas separadamente. Dispositivo de entrada AMD disponível. Conversa completa com a voz real do usuário ainda precisa de uso prático.
 
 Tarefas abre o painel para salvar notas, tarefas e lembretes, concluir/arquivar e reabrir. Registros ficam em .jarvis/tasks.json dentro da pasta de trabalho. Lembretes exigem o aplicativo aberto e notificações autorizadas no painel. Pedidos de anotação por conversa ainda estão em validação; prefira o painel por enquanto.
 
@@ -16,4 +18,7 @@ scripts/Novo-Projeto.ps1 cria workspace/projetos/<nome>, com orientação e regi
 
 -HermesDesktop conserva a interface original como alternativa. A versão Jarvis usa Electron já instalado; empacotamento independente fica para depois. Fechar o aplicativo encerra o motor que o próprio iniciador criou, preservando servidores externos.
 
-Aplicar-Configuracao.ps1 reproduz modelo e ferramentas; Configurar-Voz.ps1 configura voz; Instalar-Extensoes.ps1 instala a extensão de registros pelo mecanismo nativo. Não reinstale a cada abertura. Leia docs/ESTADO.md antes de continuar desenvolvimento. Barreira atual do assistente de desenvolvimento: 30% restantes; isso não limita o modelo local.
+Aplicar-Configuracao.ps1 reproduz modelo e ferramentas; Configurar-Voz.ps1 configura voz; Instalar-Extensoes.ps1 instala a extensão de registros pelo mecanismo nativo. Não reinstale a cada abertura. Leia docs/ESTADO.md antes de continuar desenvolvimento. Barreira atual do assistente de desenvolvimento: 25% restantes; isso não limita o modelo local.
+
+## Atalho e ícone
+Instalar-Atalho.ps1 cria o atalho Jarvis na área de trabalho. Ele chama Abrir-Jarvis.vbs para iniciar o PowerShell oculto e o aplicativo, sem abrir um terminal. Ícone próprio azul com J, independente do Hermes. Aberturas simultâneas são protegidas por mutex e o aplicativo reaproveita a janela existente. Falha do iniciador aparece como aviso e fica em logs/inicio-erro.log.

@@ -26,6 +26,13 @@ if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) { throw 'Pasta
 $taskEngine = Get-ChildItem -LiteralPath (Join-Path $taskRoot 'runtime\tools') -Directory -Filter 'llamacpp-cuda-*' | ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Filter 'llama-server.exe' -Recurse -File } | Select-Object -First 1
 if (-not $taskEngine -or -not (Test-Path -LiteralPath $taskModel)) { throw 'Motor ou modelo ausente. Consulte INSTALACAO.md.' }
 $taskServer = $null
+$taskStartupMutex = $null
+$taskStartupOwned = $false
+if ($Desktop) {
+    $taskStartupMutex = [Threading.Mutex]::new($false, 'Local\JarvisStartup')
+    $taskStartupOwned = $taskStartupMutex.WaitOne(0)
+    if (-not $taskStartupOwned) { $taskStartupMutex.Dispose(); return }
+}
 try {
     $taskExisting = $null
     try { $taskExisting = Invoke-RestMethod 'http://127.0.0.1:8081/v1/models' -TimeoutSec 2 } catch {}
@@ -51,6 +58,7 @@ try {
     Set-Location -LiteralPath $Workspace
     if ($Desktop -and -not $HermesDesktop) {
         $taskJarvisProcess = Start-Process -FilePath $taskElectron -ArgumentList ('"' + (Join-Path $taskRoot 'project\desktop') + '"') -WindowStyle Hidden -PassThru
+        $taskStartupMutex.ReleaseMutex(); $taskStartupOwned = $false
         $taskJarvisProcess.WaitForExit()
         $LASTEXITCODE = $taskJarvisProcess.ExitCode
     } elseif ($Desktop) {
@@ -73,7 +81,17 @@ try {
         & $taskHermes chat --cli -t $taskToolsets --checkpoints
     }
     if ($LASTEXITCODE -ne 0) { throw "Hermes terminou com código $LASTEXITCODE." }
+} catch {
+    $taskFailure = $_.Exception.Message
+    [IO.File]::WriteAllText((Join-Path $taskRoot 'logs\inicio-erro.log'), $taskFailure)
+    if ($Desktop) {
+        $taskPopup = New-Object -ComObject WScript.Shell
+        $taskPopup.Popup("Jarvis não conseguiu abrir: $taskFailure", 15, 'Jarvis', 16) | Out-Null
+    }
+    throw
 } finally {
+    if ($taskStartupOwned) { $taskStartupMutex.ReleaseMutex() }
+    if ($taskStartupMutex) { $taskStartupMutex.Dispose() }
     if ($taskServer -and -not $taskServer.HasExited) { Stop-Process -Id $taskServer.Id }
     Set-Location -LiteralPath $taskPreviousLocation.Path
 }

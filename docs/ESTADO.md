@@ -2,7 +2,7 @@
 Atualizado em 07/10/2026.
 
 ## Uso
-Barreira atual: 30% restantes (70% consumidos). Última leitura: 35% restantes. Prioridade autorizada: chat funcional e salvamentos, sem novas funções. WhatsApp e redes sociais estão excluídos da autorização para agir como usuário.
+Barreira atual: 80% restantes (20% consumidos). Janela de uso foi renovada durante esta etapa; última leitura inicial renovada: 99% restantes. Prioridade: abertura confiável, voz contínua e ícone, depois notas por conversa. WhatsApp e redes sociais continuam excluídos da autorização para agir como usuário.
 
 ## Base funcional
 Hermes v0.21.5, upstream separado e preservado. Qwen3.5-2B Q4_K_M local, CUDA b11370, endpoint 127.0.0.1:8081/v1, contexto real 64000, cache K/V q8_0. max_turns=10, run_budget_seconds=180. Sem API paga obrigatória. Dell G15: 8 GB RAM, RTX 3050 4 GB.
@@ -29,3 +29,14 @@ Piper é GPLv3 (OHF-Voice/piper1-gpl/COPYING); MODEL_CARD da voz pt_BR-faber-med
 
 ## Continuidade
 Repositório https://github.com/razielbaltazar/Jarvis público. Nunca publicar runtime, modelos, credenciais, logs, referências ou dados pessoais. Salvar código/documentação desta etapa; sincronização remota deve ser verificada separadamente.
+
+## Marco posterior: voz contínua e abertura
+Modo voz por botão único ou pedido textual "ative o modo voz". Captura nativa por VAD, pausa 1,5s, auto-envio, TTS local e rearmamento após áudio terminar. Encerramento disponível durante processamento/transcrição. Microfone desligado na abertura; sem barge-in automático. Teste Chromium passou: dez verificações em cha/outputs/Jarvis/voz-continua/renderer-resultado.json. Dispositivo AMD enumerado; não gravamos áudio pessoal no teste. Uso com voz real permanece a validar.
+Abrir-Jarvis.vbs inicia oculto; Instalar-Atalho.ps1 cria atalho com ícone J próprio na área de trabalho e outputs. BrowserWindow tem ícone próprio e apresentação explícita; AppUserModelId Jarvis.Desktop. Iniciador protege aberturas concorrentes e registra falhas. Abrir novamente manteve PID 1300 e modelo healthy; conexão inicial conferida em logs/jarvis-connection-1300.json.
+Correção adicional: consulta tardia da disponibilidade de voz não deve substituir PROCESSANDO por PRONTO no meio de uma resposta. Isso podia encerrar testes anteriores prematuramente. Próxima etapa iniciada: repetir apenas teste diário por conversa no workspace verificacao-diaria-20261007c; não repetir instalação ou testes de voz aprovados.
+
+
+## Auditoria e estabilização posterior
+PDF de 12 páginas entregue ao usuário em 07/10, com capturas controladas sem dados reais, diagnóstico, prioridades, fontes oficiais e prompt para outra IA. Não publicar PDF/capturas pessoais sem pedido específico. Arquivo da conversa: cha/outputs/Jarvis/output/pdf/Jarvis-Analise-Interface-e-Prompt.pdf.
+A falha de reconexão foi identificada: Hermes já tinha backend regular vivo, mas a busca consultava apenas host-desktop-serve. main.cjs agora testa ambos os registros oficiais host-serve e host-desktop-serve, com autenticação apenas no processo principal. Teste diário passou da conexão, sem encerrar o backend compartilhado. Notas ainda não aprovadas: modelo salvou o texto como task em vez de note e editou JSON diretamente; o registro anterior foi preservado. Próxima ação: conferir disponibilidade da ferramenta jarvis_records no agente e impedir confirmação sem tipo/gravação correta. Sem mais rodadas repetidas até esse diagnóstico.
+Gemini: suporte nativo confirmado no Hermes; chave recebida do usuário validou listagem de modelos e disponibilidade de gemini-3.1-flash-lite. Guardada somente em runtime/.env, excluída do Git. Nenhuma geração pela API nem alteração do modelo padrão foi feita. Aguarda informação do usuário sobre Free tier/sem faturamento para respeitar custo financeiro zero. Chave válida não demonstra o nível de cobrança. Por enquanto, modelo ativo continua jarvis-local. Política da faixa gratuita do Google informa uso de dados para melhoria dos produtos; considerar antes de enviar arquivos pessoais.

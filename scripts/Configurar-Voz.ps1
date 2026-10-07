@@ -23,6 +23,7 @@ $taskSettings = [ordered]@{
     'tts.piper.voices_dir' = (Join-Path $taskRoot 'models\voices')
     'tts.piper.use_cuda' = 'false'
     'voice.max_recording_seconds' = '20'
+    'voice.silence_duration' = '1.5'
 }
 foreach ($taskSetting in $taskSettings.GetEnumerator()) {
     & $taskHermes config set $taskSetting.Key $taskSetting.Value

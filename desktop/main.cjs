@@ -1,4 +1,4 @@
-const {app, BrowserWindow, ipcMain,Notification} = require('electron');
+const {app, BrowserWindow, ipcMain,Notification,nativeImage} = require('electron');
 const {createTaskStore}=require('./task-store.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -9,6 +9,8 @@ const root = path.resolve(__dirname, '../..');
 const workspace = process.env.JARVIS_WORKSPACE || path.join(root, 'workspace');
 const tasks=createTaskStore(workspace);let taskTimer,notificationsEnabled=false;
 const runtimeEnv = {...process.env,HERMES_HOME:path.join(root,'runtime'),HF_HOME:path.join(root,'cache/huggingface'),HERMES_VOICE:'0',HERMES_VOICE_TTS:'0'};
+app.setAppUserModelId('Jarvis.Desktop');
+const recordDirectory=path.join(os.homedir(),'.local/state/hermes/gateway-locks');
 let win, socket, backend, ownEndpoint, backendFailure='', session, connecting, busy = false, sequence = 0;
 let activeEndpoint, recording=false, recordingTimer;
 const pending = new Map();
@@ -27,11 +29,22 @@ function request(method, params) {
     socket.send(JSON.stringify({jsonrpc:'2.0', id, method, params}));
   });
 }
+async function locate(){
+  for(const name of ['host-serve','host-desktop-serve'])try{
+    const record=JSON.parse(fs.readFileSync(path.join(recordDirectory,name+'.json'),'utf8'));
+    if(record.host!=='127.0.0.1'||!Number.isInteger(record.port)||record.port<1||record.port>65535)continue;
+    const token=fs.readFileSync(path.join(recordDirectory,name+'.token'),'utf8').trim();
+    const response=await fetch(`http://127.0.0.1:${record.port}/api/status`,{headers:{Authorization:`Bearer ${token}`},signal:AbortSignal.timeout(1500)});
+    if(response.ok)return {port:record.port,token};
+  }catch{}
+  return null;
+}
 async function connect() {
   if (session && socket?.readyState === WebSocket.OPEN) return {ready:true};
   if (connecting) return connecting;
   connecting = (async () => {
-    let endpoint = ownEndpoint;
+    fs.mkdirSync(path.join(root,'logs'),{recursive:true});
+    let endpoint = ownEndpoint || await locate();
     if (!endpoint) {
       if (!backend || backend.exitCode !== null) {
         fs.mkdirSync(path.join(root,'logs'), {recursive:true});
@@ -67,7 +80,11 @@ async function connect() {
         await new Promise(resolve => setTimeout(resolve,1000));
         endpoint = ownEndpoint;
         if (endpoint) break;
-        if (backend.exitCode !== null) throw new Error('Hermes encerrou durante a inicialização: '+backendFailure);
+        if (backend.exitCode !== null) {
+          endpoint=await locate();
+          if(endpoint)break;
+          throw new Error('Hermes encerrou durante a inicialização: '+backendFailure);
+        }
       }
     }
     if (!endpoint) throw new Error('Hermes não ficou pronto. Tente conectar novamente.');
@@ -170,8 +187,8 @@ async function audioRequest(route,payload) {
 ipcMain.handle('jarvis:voice-status',async event=>{trusted(event);await connect();return request('voice.toggle',{action:'status'});});
 ipcMain.handle('jarvis:record',async(event,action)=>{
   trusted(event);if(!['start','stop','cancel'].includes(action))throw new Error('Ação de voz inválida.');
+  if(action==='cancel'){recording=false;clearTimeout(recordingTimer);if(socket?.readyState!==WebSocket.OPEN)return {enabled:false};return request('voice.toggle',{action:'off'});}
   await connect();
-  if(action==='cancel'){recording=false;clearTimeout(recordingTimer);return request('voice.toggle',{action:'off'});}
   if(action==='stop'){recording=false;clearTimeout(recordingTimer);return request('voice.record',{action:'stop',session_id:session});}
   if(busy||recording)throw new Error('Aguarde a tarefa ou a gravação atual.');
   await request('voice.toggle',{action:'on'});
@@ -215,11 +232,12 @@ if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if(win){win.restore();win.focus();} });
   app.whenReady().then(() => {
-    win=new BrowserWindow({width:1200,height:800,minWidth:720,minHeight:600,title:'Jarvis',backgroundColor:'#030a15',autoHideMenuBar:true,
+    win=new BrowserWindow({icon:nativeImage.createFromDataURL(require('./icon.cjs')),width:1200,height:800,minWidth:720,minHeight:600,title:'Jarvis',backgroundColor:'#030a15',autoHideMenuBar:true,
       webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
     win.webContents.setWindowOpenHandler(() => ({action:'deny'}));
     win.webContents.on('will-navigate', event => event.preventDefault());
     win.loadFile(path.join(__dirname,'index.html'));
+    win.once('ready-to-show',()=>{win.show();win.focus();});
     taskTimer=setInterval(()=>{
       try{
         const due=tasks.due();emit({type:'tasks.due',payload:{count:due.length}});

@@ -9,8 +9,8 @@ Núcleo: entender, planejar e coordenar. Memória: preferências e contexto sepa
 1. Diagnosticar recursos e instalações existentes (concluído; detalhes mantidos localmente).
 2. Instalar e validar Hermes e modelo compacto por texto em português (concluído para núcleo básico).
 3. Testar ferramentas em tarefa simples e pequeno projeto (concluído: arquivos, edição, terminal e canal desktop).
-4. Personalizar nome, personalidade e interface Jarvis (em andamento: identidade e perfil prontos; aparência original Hermes).
-5. Expandir memória, agenda, voz e integrações conforme prioridade.
+4. Personalizar nome, personalidade e interface Jarvis (HUD próprio, ícone e atalho implementados).
+5. Expandir memória, agenda, voz e integrações conforme prioridade (voz contínua implementada; validar notas por conversa, depois agenda Google).
 
 ## Decisões
 Um motor e um modelo primeiro; desempenho e qualidade precisam de testes. Google Calendar antes de Apple. Arquivos locais e GitHub conforme necessidade. Aprovação antes de publicação de produtos, envio de mensagens, exclusões ou alterações importantes. Segredos e dados pessoais fora do repositório. OpenJarvis permanece alternativa ou integração específica.
