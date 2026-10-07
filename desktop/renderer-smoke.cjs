@@ -52,6 +52,12 @@ app.whenReady().then(async()=>{
  await event('connection.error',{});
  assert.equal(await evaluate("document.getElementById('input').disabled"),false);
  assert.equal(await evaluate("document.querySelectorAll('#queue .queued').length"),1);
- const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true,inputAvailableDuringTask:true,queuedSendSerialized:true,interruptWaitsForCompletion:true,queueEditing:true,draftSurvivesDisconnect:true},null,2));
+
+ win.setSize(720,600);await sleep(100);
+ await evaluate("document.getElementById('tasks-toggle').click();document.getElementById('system-toggle').click()");
+ assert.equal(await evaluate("document.getElementById('tasks').hidden"),true);
+ const bounds=await evaluate("(()=>{const p=document.getElementById('system').getBoundingClientRect(),c=document.querySelector('.composer').getBoundingClientRect();return {panelBottom:p.bottom,composerTop:c.top};})()");
+ assert.ok(bounds.panelBottom<=bounds.composerTop,'Compact panel covers composer');
+ const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'compacto.png'),(await win.webContents.capturePage()).toPNG());fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true,inputAvailableDuringTask:true,queuedSendSerialized:true,interruptWaitsForCompletion:true,queueEditing:true,draftSurvivesDisconnect:true,compactPanelsDoNotOverlapComposer:true},null,2));
  win.close();app.quit();
 }).catch(error=>{console.error(error.stack);app.exit(1);});

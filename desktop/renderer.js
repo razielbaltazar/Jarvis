@@ -6,7 +6,7 @@ const decisions=new Map();
 let queue=[], queuePaused=false, lastEventAt=Date.now();
 try{queue=JSON.parse(localStorage.getItem('jarvis-drafts')||'[]').filter(x=>typeof x.text==='string'&&x.text.length<=16000).slice(0,10);queuePaused=queue.length>0;}catch{}
 function renderQueue(){
- localStorage.setItem('jarvis-drafts',JSON.stringify(queue));$('queue').replaceChildren();$('queue').hidden=!queue.length;
+ document.body.dataset.queued=String(queue.length>0);localStorage.setItem('jarvis-drafts',JSON.stringify(queue));$('queue').replaceChildren();$('queue').hidden=!queue.length;
  for(const item of queue){const row=document.createElement('div');row.className='queued';const text=document.createElement('span');text.textContent=item.text;row.append(text);
  const action=(label,fn)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.addEventListener('click',fn);row.append(button);};
  action('Enviar agora',async()=>{queue=queue.filter(x=>x!==item);queue.unshift(item);queuePaused=false;renderQueue();if(busy){try{await window.jarvis.interrupt();log('Interrupção solicitada; aguardando o encerramento.');}catch(error){queuePaused=true;log(error.message);}}else drainQueue();});
@@ -49,7 +49,7 @@ async function speak(text){
   await playback.play();
  }catch(error){if(generation!==speechGeneration)return;endVoice();state('ready');log('Voz: '+error.message);}
 }
-function panel(id,show){if(show&&id==='tasks')panel('conversation',false);if(show&&id==='conversation')panel('tasks',false);$(id).hidden=!show;const toggle=$(id==='conversation'?'chat-toggle':id+'-toggle');toggle?.setAttribute('aria-expanded',String(show));if(id==='conversation')$('orb').setAttribute('aria-expanded',String(show));}
+function panel(id,show){if(show)for(const other of ['system','activity','tasks','conversation'])if(other!==id)panel(other,false);$(id).hidden=!show;const toggle=$(id==='conversation'?'chat-toggle':id+'-toggle');toggle?.setAttribute('aria-expanded',String(show));if(id==='conversation')$('orb').setAttribute('aria-expanded',String(show));}
 for(const [button,id] of [['system-toggle','system'],['activity-toggle','activity'],['chat-toggle','conversation'],['orb','conversation'],['tasks-toggle','tasks']]) $(button).addEventListener('click',()=>{panel(id,$(id).hidden);if(id==='system'&&!$(id).hidden) resources();if(id==='tasks'&&!$(id).hidden)refreshTasks();});
 document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>panel(button.dataset.close,false)));
 let idle;
@@ -65,7 +65,7 @@ $('input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.ctrl
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();interruptCurrent().catch(error=>log(error.message));}});
 $('stop').addEventListener('click',()=>interruptCurrent().catch(error=>log(error.message)));
 $('listen').addEventListener('click',()=>{if(playback||synthesizing){stopAudio();state('ready');}else speak(lastResponse);});
-async function endVoice(){voiceMode=false;voiceEpoch++;recording=false;transcribing=false;micPending=false;stopAudio();try{await window.jarvis.record('cancel');}catch{}state(busy?'processing':'ready');}
+async function endVoice(){voiceMode=false;voiceEpoch++;recording=false;transcribing=false;micPending=false;stopAudio();try{await window.jarvis.record('cancel');}catch{}state(!ready?'error':busy?'processing':'ready');}
 async function beginListening(){
  if(!voiceMode||busy||playback||synthesizing||decisions.size)return;
  const epoch=voiceEpoch;micPending=true;state('processing');
