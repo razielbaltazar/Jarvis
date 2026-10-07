@@ -22,3 +22,8 @@ Aplicar-Configuracao.ps1 reproduz modelo e ferramentas; Configurar-Voz.ps1 confi
 
 ## Atalho e ícone
 Instalar-Atalho.ps1 cria o atalho Jarvis na área de trabalho. Ele chama Abrir-Jarvis.vbs para iniciar o PowerShell oculto e o aplicativo, sem abrir um terminal. Ícone próprio azul com J, independente do Hermes. Aberturas simultâneas são protegidas por mutex e o aplicativo reaproveita a janela existente. Falha do iniciador aparece como aviso e fica em logs/inicio-erro.log.
+
+## Texto durante tarefas
+Você pode digitar enquanto o Jarvis trabalha. Enter guarda na fila; Enviar agora ou Ctrl+Enter solicita interromper antes do próximo pedido. Editar devolve o texto ao campo; Remover exclui apenas o pedido da fila. Esc solicita parar. Após erro ou reinício, revise a fila e clique Enviar agora para retomar. Interromper não desfaz ações já realizadas.
+
+O modelo padrão atual é Gemini 3.1 Flash-Lite, que precisa de internet. O Qwen local continua instalado. A chave fica somente no ambiente privado.

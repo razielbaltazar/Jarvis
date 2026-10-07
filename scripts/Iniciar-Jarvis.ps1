@@ -23,8 +23,10 @@ if (-not $Workspace) { $Workspace = Join-Path $taskRoot 'workspace' }
 $env:JARVIS_WORKSPACE = $Workspace
 if ($QueryFile) { $QueryFile = (Resolve-Path -LiteralPath $QueryFile).Path }
 if (-not (Test-Path -LiteralPath $Workspace -PathType Container)) { throw 'Pasta de trabalho ausente.' }
+$taskConfig = Get-Content -LiteralPath (Join-Path $taskRoot 'runtime\config.yaml') -Raw
+$taskUseLocalModel = $taskConfig -match '(?m)^  provider:\s*["'']?custom["'']?\s*$' -and $taskConfig -match '(?m)^  default:\s*["'']?jarvis-local["'']?\s*$'
 $taskEngine = Get-ChildItem -LiteralPath (Join-Path $taskRoot 'runtime\tools') -Directory -Filter 'llamacpp-cuda-*' | ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Filter 'llama-server.exe' -Recurse -File } | Select-Object -First 1
-if (-not $taskEngine -or -not (Test-Path -LiteralPath $taskModel)) { throw 'Motor ou modelo ausente. Consulte INSTALACAO.md.' }
+if ($taskUseLocalModel -and (-not $taskEngine -or -not (Test-Path -LiteralPath $taskModel))) { throw 'Motor ou modelo ausente. Consulte INSTALACAO.md.' }
 $taskServer = $null
 $taskStartupMutex = $null
 $taskStartupOwned = $false
@@ -34,6 +36,7 @@ if ($Desktop) {
     if (-not $taskStartupOwned) { $taskStartupMutex.Dispose(); return }
 }
 try {
+    if ($taskUseLocalModel) {
     $taskExisting = $null
     try { $taskExisting = Invoke-RestMethod 'http://127.0.0.1:8081/v1/models' -TimeoutSec 2 } catch {}
     if ($taskExisting -and 'jarvis-local' -notin $taskExisting.data.id) { throw 'A porta 8081 está em uso por outro modelo.' }
@@ -54,6 +57,7 @@ try {
             Start-Sleep -Milliseconds 500
         }
         if (-not $taskReady) { throw 'O modelo não ficou pronto dentro do prazo.' }
+    }
     }
     Set-Location -LiteralPath $Workspace
     if ($Desktop -and -not $HermesDesktop) {

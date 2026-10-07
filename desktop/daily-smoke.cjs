@@ -15,6 +15,8 @@ app.whenReady().then(async()=>{
  for(let i=0;i<180;i++){
   await sleep(1000);const state=await win.webContents.executeJavaScript('document.body.dataset.state');
   if(state==='ready'){
+   const answer=await win.webContents.executeJavaScript("document.querySelector('#messages .assistant:last-child span')?.textContent||''");
+   if(/erro|n[aã]o (posso|consigo|consegui)|conflito/i.test(answer)||!answer)throw new Error('Agent did not confirm successful save: '+answer.slice(0,300));
    const store=JSON.parse(fs.readFileSync(path.join(process.env.JARVIS_WORKSPACE,'.jarvis/tasks.json'),'utf8'));
    const note=store.items.find(item=>item.type==='note'&&item.text==='Continuidade do projeto validada.');
    if(!note)throw new Error('Agent did not save the note');if(!store.items.find(item=>item.id===first.id)?.done)throw new Error('Agent lost existing task');

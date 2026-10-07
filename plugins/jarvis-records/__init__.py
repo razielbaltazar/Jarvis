@@ -21,7 +21,7 @@ def handle(args, task_id='default', **kwargs):
     try:
         from tools.file_tools_paths import _resolve_base_dir, _terminal_env_type_for_task
         if _terminal_env_type_for_task(task_id) not in ('local', 'host'):
-            return {'success': False, 'error': 'Registros Jarvis disponíveis somente no workspace local.'}
+            return json.dumps({'success': False, 'error': 'Registros Jarvis disponíveis somente no workspace local.'}, ensure_ascii=False)
         workspace = str(_resolve_base_dir(task_id))
         payload = dict(args)
         if payload.get('action') == 'create':
@@ -30,9 +30,9 @@ def handle(args, task_id='default', **kwargs):
         result = subprocess.run([str(node), str(ROOT / 'project' / 'desktop' / 'task-cli.cjs'), workspace],
                                 input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8',
                                 timeout=20, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
-        return json.loads(result.stdout)
+        return json.dumps(json.loads(result.stdout), ensure_ascii=False)
     except Exception as error:
-        return {'success': False, 'error': str(error)[:500]}
+        return json.dumps({'success': False, 'error': str(error)[:500]}, ensure_ascii=False)
 
 def register(ctx):
     ctx.register_tool(name='jarvis_records', toolset='jarvis_local', schema=SCHEMA, handler=handle)

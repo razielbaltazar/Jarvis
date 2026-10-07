@@ -1,5 +1,6 @@
 // Real Chromium voice-cycle checks with mocked microphone/audio; no personal recording.
 const {app,BrowserWindow}=require('electron');const assert=require('node:assert/strict');const fs=require('node:fs');const path=require('node:path');
+app.setPath('userData',path.join(app.getPath('temp'),'jarvis-renderer-check-'+process.pid));
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
  const win=new BrowserWindow({show:false,webPreferences:{preload:path.join(__dirname,'test-preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
@@ -31,6 +32,26 @@ app.whenReady().then(async()=>{
  await event('user.request',{id:'test',method:'approval',params:{command:'<img src=x onerror=alert(1)>',choices:['once','deny']}});
  assert.equal(await evaluate('document.body.dataset.state'),'waiting');assert.equal(await evaluate("!!document.querySelector('#decision img')"),false);
  await event('request.cancel',{id:'test'});assert.equal(await evaluate("document.getElementById('decision').hidden"),true);
- const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true},null,2));
+
+ await event('message.complete',{text:'Projeto pronto',status:'complete'});
+ await evaluate("document.getElementById('input').value='Primeira';document.getElementById('form').requestSubmit()");
+ assert.equal(await evaluate("document.getElementById('input').disabled"),false);
+ await evaluate("document.getElementById('input').focus();document.getElementById('input').value='Segunda';document.getElementById('form').requestSubmit()");
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Primeira');
+ assert.equal(await evaluate("document.querySelectorAll('#queue .queued').length"),1);
+ await event('message.complete',{text:'Primeira pronta',status:'complete'});await sleep(80);
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Segunda');
+ await evaluate("document.getElementById('input').value='Terceira';document.getElementById('form').requestSubmit();document.querySelector('#queue button').click()");await sleep(80);
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Segunda');
+ await event('message.complete',{status:'interrupted'});await sleep(80);
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Terceira');
+ await evaluate("document.getElementById('input').value='Rascunho';document.getElementById('form').requestSubmit();document.querySelectorAll('#queue button')[1].click()");
+ assert.equal(await evaluate("document.getElementById('input').value"),'Rascunho');
+ assert.equal(await evaluate("document.querySelectorAll('#queue .queued').length"),0);
+ await evaluate("document.getElementById('form').requestSubmit()");
+ await event('connection.error',{});
+ assert.equal(await evaluate("document.getElementById('input').disabled"),false);
+ assert.equal(await evaluate("document.querySelectorAll('#queue .queued').length"),1);
+ const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true,inputAvailableDuringTask:true,queuedSendSerialized:true,interruptWaitsForCompletion:true,queueEditing:true,draftSurvivesDisconnect:true},null,2));
  win.close();app.quit();
 }).catch(error=>{console.error(error.stack);app.exit(1);});
