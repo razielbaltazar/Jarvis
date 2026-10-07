@@ -27,3 +27,5 @@ Instalar-Atalho.ps1 cria o atalho Jarvis na área de trabalho. Ele chama Abrir-J
 Você pode digitar enquanto o Jarvis trabalha. Enter guarda na fila; Enviar agora ou Ctrl+Enter solicita interromper antes do próximo pedido. Editar devolve o texto ao campo; Remover exclui apenas o pedido da fila. Esc solicita parar. Após erro ou reinício, revise a fila e clique Enviar agora para retomar. Interromper não desfaz ações já realizadas.
 
 O modelo padrão atual é Gemini 3.1 Flash-Lite, que precisa de internet. O Qwen local continua instalado. A chave fica somente no ambiente privado.
+
+O atalho Jarvis está na área de trabalho. No painel Sistema, ONLINE indica Gemini; LOCAL indica o modelo local. Se um registro estiver em uso, espere e tente novamente. Se o aviso persistir após falha do programa, preserve os dados e solicite recuperação do bloqueio.

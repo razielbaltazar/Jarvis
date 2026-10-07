@@ -1,50 +1,29 @@
 # Estado para retomada
-Atualizado em 07/10/2026.
+Atualizado em 07/10/2026. Etapa 5 do plano: memória, voz e integrações; núcleo e HUD funcionais, consolidação da primeira versão utilizável.
 
-## Uso
-Barreira atual: 70% restantes (30% consumidos). Janela de uso foi renovada durante esta etapa; última leitura inicial renovada: 99% restantes. Prioridade: abertura confiável, voz contínua e ícone, depois notas por conversa. WhatsApp e redes sociais continuam excluídos da autorização para agir como usuário.
+## Limite e escopo
+Pausar em 60% restantes (40% consumidos), conforme autorização atual. Consultar entre marcos, sem gastar para atingir a barreira. WhatsApp e redes sociais excluídos da autorização para agir como usuário. Código/documentação podem ser sincronizados no GitHub; nunca publicar runtime, credenciais, logs ou dados pessoais.
 
-## Base funcional
-Hermes v0.21.5, upstream separado e preservado. Qwen3.5-2B Q4_K_M local, CUDA b11370, endpoint 127.0.0.1:8081/v1, contexto real 64000, cache K/V q8_0. max_turns=10, run_budget_seconds=180. Sem API paga obrigatória. Dell G15: 8 GB RAM, RTX 3050 4 GB.
-HUD Electron minimalista, orbe, conversa, painéis opcionais. Recuperação de conversa usa stored_session_id/session_key, não ID transitório. Marco anterior validou reabertura e arquivo pelo desktop. Iniciar-Jarvis.ps1 -Desktop abre HUD; -HermesDesktop conserva alternativa original.
+## Funciona e foi verificado
+- Hermes v0.21.5 separado, sem alterações upstream; Electron com HUD, ícone Jarvis e iniciador oculto. Atalho verificado em C:/Users/razie/Desktop/Jarvis.lnk. Duas aberturas pelo atalho mantiveram um processo normal.
+- Gemini 3.1 Flash-Lite como padrão, API e conversa real Electron -> Hermes -> Gemini aprovadas. Chave só em runtime/.env. Sem ativação de faturamento. Iniciar com Gemini dispensa carregar o servidor local.
+- Qwen3.5-2B Q4_K_M preservado, llama.cpp CUDA b11370, contexto 64000 e cache q8_0. Backup da configuração local: runtime/config.before-gemini.yaml. Dell G15: 8 GB RAM, RTX 3050 4 GB.
+- Criação real de arquivo pelo Gemini via write_file, conteúdo conferido e confirmação do agente. Teste isolado em workspace/projetos/verificacao-arquivo-gemini-20261007; evidência cha/outputs/Jarvis/arquivo-gemini/resultado.json.
+- Cinco aberturas do Electron com duas respostas preservadas. Fila real serializou dois pedidos. Rodada adicional confirmou reconexão com socket já aberto sem apagar histórico nem alterar o modelo mostrado. IDs persistidos: stored_session_id, session_key/resumed; não usar apenas ID transitório. Evidência cha/outputs/Jarvis/retomada-atual/reabertura-*.json.
+- Entrada habilitada durante tarefas, voz e desconexão. Enter enfileira; Enviar agora/Ctrl+Enter solicita interrupção e aguarda message.complete. Editar/Remover disponíveis. Fila e rascunho persistidos localmente; erros/reinício exigem revisão explícita antes do reenvio. Esc para áudio/captura e solicita interrupção/recusa aprovação. Aviso após 60 segundos sem eventos.
+- Painel único, fonte de conversa 15px, controles maiores, gaveta compacta e espaço para entrada/fila. Teste 720x600 não sobrepôs painel e entrada. Dezesseis verificações renderer passaram; não substitui todas as escalas/tamanhos.
+- Notas/tarefas/lembretes no painel e ferramenta jarvis_records. Handler deve retornar STRING JSON: dict comum era rejeitado, apesar da gravação. Corrigido no plugin e runtime; Gemini confirmou nota como note e preservou tarefa existente. Evidência cha/outputs/Jarvis/notas-corrigidas/tarefas-resultado.json, sessão 20261007_152326_074274.
+- Escritas de registros agora usam exclusão mútua entre processos e gravação atômica. Cinco testes passaram, incluindo quatro processos concorrentes preservando 80 registros. Colisão retorna erro explícito, sem sobrescrever. JSON inválido preservado.
 
-## Implementado nesta etapa
-Voz local pelo PM oficial: extras stt-whisper, piper e voice. Piper pt_BR-faber-medium em CPU; Whisper base CPU int8, português. Botão de microfone exige clique; transcrição preenche campo sem enviar automaticamente. Leitura de respostas opcional e desativada por padrão. Não houve teste do microfone físico nem audição pelo usuário.
-Tarefas, notas e lembretes no painel, por workspace, em .jarvis/tasks.json. Validação, gravação atômica, concluir/reabrir sem excluir. Lembretes exigem app aberto; notificações opt-in. Nenhuma notificação real foi disparada no teste.
-Pedidos nativos de aprovação/clarificação apresentados no HUD, sem aprovação automática. Teste de renderer passou; rodada de aprovação real do backend ainda não validada.
-Extensão plugins/jarvis-records instalada e habilitada pelo CLI oficial. Ferramenta jarvis_records reutiliza validador do painel por ponte JSON; sem editar upstream.
+## Voz e limites reais
+Whisper base CPU int8 pt e Piper pt_BR-faber-medium; instalação via PM oficial. Modo voz por botão único ou pedido “ative o modo voz”: VAD, pausa 1,5s, auto-envio, TTS e nova escuta. Microfone desligado na abertura; captura pausa durante fala. Testes de ponte, síntese/transcrição e ciclo com áudio simulado passaram. Usuário não consegue testar microfone agora; uso físico permanece PENDENTE. Barge-in, eco e latência física não validados. Lembretes exigem app aberto e notificações opt-in; nenhuma notificação pessoal disparada em testes.
+Aprovações/clarificações nativas aparecem na tela. Teste de aprovação simulada passou; falta rodada real que solicite aprovação. Cancelamento solicitado não equivale a ação desfeita.
 
-## Evidência e pendência importante
-Voz: geração/transcrição direta e ponte Electron autenticada passaram, microfone não utilizado. Arquivos em cha/outputs/Jarvis/voz da conversa.
-Renderer real Electron: microfone desligado ao abrir, revisão antes do envio, erro de áudio antigo não altera nova tarefa, texto de aprovação escapado e cancelamento passaram.
-Task-store: três testes passaram (persistência, JSON inválido preservado, lembretes).
-Teste diário: salvar/concluir pelo painel passou; salvar nota por linguagem natural FALHOU em duas tentativas. Modelo confirmou sem gravar corretamente. Extensão foi adicionada entre tentativas, mas a segunda também não salvou. Não declarar notas por conversa operacionais.
-Chat simples confirmou resposta em português e liberação do formulário no teste real Electron; conteúdo também conferido na sessão de teste. A segunda mensagem que pediu guardar uma palavra acionou ferramentas e não concluiu a validação; teste de duas mensagens/retomada deste marco não aprovado. Próxima ação: investigar registro/disponibilidade/assinatura da jarvis_records e testar chamada direta antes de mais uma rodada de modelo. Inspecionar apenas sessão de teste e logs curtos. Workspace da segunda tentativa: workspace/projetos/verificacao-diaria-20261007b. Não repetir instalações nem testes já aprovados.
+## Operação e continuidade
+ESTADO.md é o resumo atual; PLANO.md guarda apenas decisões. Histórico Git e testes guardam marcos anteriores. scripts/Iniciar-Jarvis.ps1 -Desktop abre HUD; -HermesDesktop conserva alternativa original. Instalar-Atalho.ps1 recria atalho. Configurar-Voz.ps1 e verificar_voz.py reproduzem voz; Instalar-Extensoes.ps1 instala jarvis-records. CLI toolsets file, terminal, jarvis_local.
+Não iniciar segundo instalador. Não matar backend compartilhado; main.cjs autentica registros host-serve e host-desktop-serve e encerra somente o backend que iniciou. Marker privado logs/jarvis-connection-<pid>.json confirma conexão, não atividade atual.
+Se processo morrer durante gravação, pode restar .jarvis/tasks.lock: conferir PID do arquivo e ausência de gravador vivo antes de remover SOMENTE esse bloqueio. Não apagar tasks.json nem remover bloqueio automaticamente.
+Piper GPLv3, dataset da voz declarado CC0; conferir distribuição na etapa comercial. PDF privado de 12 páginas com análise e prompt em cha/outputs/Jarvis/output/pdf/Jarvis-Analise-Interface-e-Prompt.pdf.
 
-## Reprodução e limites
-Configurar-Voz.ps1 e verificar_voz.py reproduzem configuração/teste. Instalar-Extensoes.ps1 instala plugin e habilita toolset jarvis_local. Perfis CLI devem incluir file, terminal, jarvis_local.
-Janela normal reiniciada em 07/10 para carregar extensão/SOUL. Iniciador proprietário PID 13984. Diagnóstico privado logs/jarvis-connection-<pid>.json confirma conexão inicial; conferir também que processo e motor continuam vivos. Não matar servidor compartilhado antes de fechar o iniciador proprietário. Microfone permanece desligado por padrão.
-Agenda Google/Apple ainda não conectada. Sem conselho de agentes, autoedição ou Ultron; Ultron é visão futura.
-Piper é GPLv3 (OHF-Voice/piper1-gpl/COPYING); MODEL_CARD da voz pt_BR-faber-medium declara dataset CC0. Rever distribuição/licenças na etapa comercial, sem presumir licença de dataset como licença de tudo.
-
-## Continuidade
-Repositório https://github.com/razielbaltazar/Jarvis público. Nunca publicar runtime, modelos, credenciais, logs, referências ou dados pessoais. Salvar código/documentação desta etapa; sincronização remota deve ser verificada separadamente.
-
-## Marco posterior: voz contínua e abertura
-Modo voz por botão único ou pedido textual "ative o modo voz". Captura nativa por VAD, pausa 1,5s, auto-envio, TTS local e rearmamento após áudio terminar. Encerramento disponível durante processamento/transcrição. Microfone desligado na abertura; sem barge-in automático. Teste Chromium passou: dez verificações em cha/outputs/Jarvis/voz-continua/renderer-resultado.json. Dispositivo AMD enumerado; não gravamos áudio pessoal no teste. Uso com voz real permanece a validar.
-Abrir-Jarvis.vbs inicia oculto; Instalar-Atalho.ps1 cria atalho com ícone J próprio na área de trabalho e outputs. BrowserWindow tem ícone próprio e apresentação explícita; AppUserModelId Jarvis.Desktop. Iniciador protege aberturas concorrentes e registra falhas. Abrir novamente manteve PID 1300 e modelo healthy; conexão inicial conferida em logs/jarvis-connection-1300.json.
-Correção adicional: consulta tardia da disponibilidade de voz não deve substituir PROCESSANDO por PRONTO no meio de uma resposta. Isso podia encerrar testes anteriores prematuramente. Próxima etapa iniciada: repetir apenas teste diário por conversa no workspace verificacao-diaria-20261007c; não repetir instalação ou testes de voz aprovados.
-
-
-## Auditoria e estabilização posterior
-PDF de 12 páginas entregue ao usuário em 07/10, com capturas controladas sem dados reais, diagnóstico, prioridades, fontes oficiais e prompt para outra IA. Não publicar PDF/capturas pessoais sem pedido específico. Arquivo da conversa: cha/outputs/Jarvis/output/pdf/Jarvis-Analise-Interface-e-Prompt.pdf.
-A falha de reconexão foi identificada: Hermes já tinha backend regular vivo, mas a busca consultava apenas host-desktop-serve. main.cjs agora testa ambos os registros oficiais host-serve e host-desktop-serve, com autenticação apenas no processo principal. Teste diário passou da conexão, sem encerrar o backend compartilhado. Notas ainda não aprovadas: modelo salvou o texto como task em vez de note e editou JSON diretamente; o registro anterior foi preservado. Próxima ação: conferir disponibilidade da ferramenta jarvis_records no agente e impedir confirmação sem tipo/gravação correta. Sem mais rodadas repetidas até esse diagnóstico.
-## Marco atual: Gemini, entrada livre e notas
-Modelo padrão Gemini 3.1 Flash-Lite. Chave somente runtime/.env, backup da configuração local em runtime/config.before-gemini.yaml. Teste API e teste real Electron -> Hermes -> Gemini passaram, com resposta conferida em cha/outputs/Jarvis/gemini/gemini-resultado.json. Qwen preservado; iniciar com Gemini dispensa carregar o servidor local. Não ativar faturamento.
-Caixa de texto permanece habilitada durante execução, áudio, aprovações e desconexão. Enter durante tarefa enfileira; fila permite Enviar agora, Editar e Remover. Enviar agora/Ctrl+Enter solicita interrupção e aguarda message.complete antes de enviar. Rascunhos/fila guardados localmente; fila recuperada após reinício exige envio explícito. Falhas pausam a fila; não reenviar automaticamente pedidos de confirmação incerta. Esc solicita interrupção/recusa aprovação e para áudio/captura. Aviso após 60 segundos sem eventos; não confundir solicitação de parada com confirmação.
-Teste renderer isolado passou em 15 verificações: voz, entrada durante tarefa, serialização da fila, aguardar cancelamento, editar e preservar fila na desconexão. Evidência cha/outputs/Jarvis/fila/renderer-resultado.json. Teste anterior sem isolamento encontrou rascunho persistido de rodada antiga; corrigido o isolamento do teste.
-Falha de notas diagnosticada: handler retornava dict comum, mas Hermes exige string JSON. Corrigido plugin e cópia runtime, sem alterar upstream. Backend reiniciado após fechamento normal do app para carregar extensão. Teste real Gemini validou criação de nota como note, resultado success/saved, confirmação do agente e preservação da tarefa existente: cha/outputs/Jarvis/notas-corrigidas/tarefas-resultado.json. Sessão isolada 20261007_152326_074274. Um teste anterior verificava só o arquivo e podia aprovar apesar de erro do agente; agora exige também confirmação sem erro. Não generalizar para todos os cenários.
-Estudo externo incorporado como referência, não comandos: prioridade confiabilidade, texto/fila, layout adaptativo, voz com interrupção, acabamento visual. Busto de luz opcional futuro. Barge-in e microfone físico ainda não validados; sem alegar voz equivalente a sistemas Live.
-Próxima etapa: layout compacto/gavetas e legibilidade, validar abrir/fechar/retomar repetidamente e voz física com usuário; integrações de agenda posteriormente. Barreira atual 70% restantes.
-
-Layout posterior: painel único por vez, tipografia de conversa 15px, controles maiores, camadas separadas e gaveta compacta. Teste Chromium 720x600 confirmou painel sem sobrepor entrada mesmo com fila; 16 verificações passaram. Não substitui validação em todas as escalas de tela. Código carregado na próxima abertura do app.
+## Próxima ação
+Validar voz física quando usuário puder. Depois integrar Google Calendar (antes de Apple) com autorização própria do Jarvis; conexão do Codex não é automaticamente transferida ao app. Refinar resultados de arquivos/código e testes de aprovação/cancelamento conforme tarefas reais. Busto de luz opcional futuro. Sem conselho de agentes, autoedição ou Ultron nesta etapa.

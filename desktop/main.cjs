@@ -145,7 +145,7 @@ async function connect() {
       .map(row=>({role:row.role,text:typeof row.content==='string'?row.content:typeof row.text==='string'?row.text:''})).filter(row=>row.text);
     // Private diagnostic marker, without credentials or conversation content.
     fs.writeFileSync(path.join(root,'logs',`jarvis-connection-${process.pid}.json`),JSON.stringify({connected:true,pid:process.pid,workspace,checked_at:new Date().toISOString()}));
-    return {ready:true,model:result.info?.model||'Qwen3.5 · 2B local',messages};
+    return {ready:true,model:result.info?.model||'Modelo em verificação',messages};
   })();
   try { return await connecting; } finally { connecting=null; }
 }
