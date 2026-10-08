@@ -10,6 +10,6 @@ foreach ($taskName in @('plugin.yaml','__init__.py')) {
 $taskHermes = Join-Path $taskRoot 'runtime\bin\hermes.exe'
 & $taskHermes plugins enable jarvis-records
 if ($LASTEXITCODE -ne 0) { throw 'Não foi possível habilitar a extensão local.' }
-& $taskHermes config set platform_toolsets.cli '[file, terminal, browser, memory, skills, todo, jarvis_local]'
+& $taskHermes config set platform_toolsets.cli '[file, terminal, browser, web, memory, skills, todo, session_search, clarify, code_execution, delegation, tts, vision, video, jarvis_local]'
 if ($LASTEXITCODE -ne 0) { throw 'Não foi possível habilitar as ferramentas locais.' }
 Write-Host 'Extensão de registros Jarvis instalada, mantendo o código upstream separado.'

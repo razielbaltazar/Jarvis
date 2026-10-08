@@ -16,6 +16,7 @@ logs/
 workspace/
 work/
 outputs/
+private-checks/
 .venv/
 venv/
 node_modules/

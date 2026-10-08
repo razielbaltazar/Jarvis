@@ -22,3 +22,5 @@ header{height:66px;display:flex;align-items:center;justify-content:space-between
 @media(max-width:900px),(max-height:650px){.panel{top:20px}body:has(.panel:not([hidden])) .orb-area{opacity:.15;pointer-events:none}}
 
 #calendar{overflow:auto}#calendar-past{width:auto;margin-right:8px}#calendar-items{overflow:auto}
+#system{overflow:auto}#model-choice{display:block;width:100%;margin:8px 0;background:#0d2535;color:#aad5e5;border:1px solid #539abe55;border-radius:8px;padding:8px;font:inherit}.model-actions{display:flex;gap:12px}.model-actions button{font-size:12px;padding:8px 0}#model-info{overflow-wrap:anywhere}
+#capabilities{margin:12px 0}#capabilities summary{cursor:pointer;font-size:12px;color:#aad5e5}#capabilities-tools{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}#native-controls button{font-size:12px;margin-right:10px;padding:8px 0}

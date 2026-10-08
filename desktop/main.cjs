@@ -1,5 +1,6 @@
 const {app, BrowserWindow, ipcMain,Notification,nativeImage} = require('electron');
 const {createTaskStore}=require('./task-store.cjs');
+const {modelOptions,modelCommand}=require('./model-controls.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -9,6 +10,8 @@ const root = path.resolve(__dirname, '../..');
 const workspace = process.env.JARVIS_WORKSPACE || path.join(root, 'workspace');
 const tasks=createTaskStore(workspace);let taskTimer,notificationsEnabled=false;
 const runtimeEnv = {...process.env,HERMES_HOME:path.join(root,'runtime'),HF_HOME:path.join(root,'cache/huggingface'),HERMES_VOICE:'0',HERMES_VOICE_TTS:'0'};
+// This HUD cannot answer the original desktop's pane/project requests.
+runtimeEnv.HERMES_TUI_TOOLSETS=JSON.parse(fs.readFileSync(path.join(__dirname,'../config/toolsets.json'),'utf8')).join(',');
 app.setAppUserModelId('Jarvis.Desktop');
 const recordDirectory=path.join(os.homedir(),'.local/state/hermes/gateway-locks');
 let win, socket, backend, ownEndpoint, backendFailure='', session, connecting, busy = false, sequence = 0;
@@ -106,7 +109,11 @@ async function connect() {
           if(['approval','clarify'].includes(frame.method)){
             userRequests.set(String(frame.id),frame);
             emit({type:'user.request',payload:{id:String(frame.id),method:frame.method,params:frame.params}});
-          }else emit({type:'session.notice',text:'Esta ação requer um recurso da interface original do Hermes. Interrompa e use -HermesDesktop para continuar.'});
+          }else {
+            // Every server request needs a terminal response, including unsupported panes.
+            socket.send(JSON.stringify({jsonrpc:'2.0',id:frame.id,error:{code:-32601,message:'This client does not implement this Hermes interface request.'}}));
+            emit({type:'session.notice',text:'Esta ação exige um painel da interface completa do Hermes. Abra-a pelo iniciador com -HermesDesktop. O pedido recebeu uma resposta de indisponibilidade.'});
+          }
         } else if (frame.method === 'event') {
           const data = frame.params;
           if (data?.session_id && data.session_id !== session) continue;
@@ -161,10 +168,51 @@ async function connect() {
 }
 function trusted(event) { if (event.sender !== win?.webContents || event.senderFrame !== win.webContents.mainFrame) throw new Error('Origem inválida.'); }
 ipcMain.handle('jarvis:connect', (event) => { trusted(event); return connect(); });
+ipcMain.handle('jarvis:full-interface', async event => {
+  trusted(event);
+  if(busy||recording||userRequests.size)throw Error('Aguarde a tarefa atual e encerre a voz antes de abrir a interface completa.');
+  if(!fs.existsSync(path.join(root,'hermes-agent/apps/desktop/release/win-unpacked/Hermes.exe')))throw Error('Interface completa ainda não instalada.');
+  const nativeEnv={...runtimeEnv};delete nativeEnv.HERMES_TUI_TOOLSETS;
+  await new Promise((resolve,reject)=>{
+    const child=spawn('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(__dirname,'../scripts/Iniciar-Jarvis.ps1'),'-HermesDesktop','-Workspace',workspace],{windowsHide:true,env:nativeEnv,stdio:'ignore'});
+    child.once('error',reject);child.once('spawn',()=>{child.unref();resolve();});
+  });
+  return {launchRequested:true};
+});
+ipcMain.handle('jarvis:models',async event=>{
+  trusted(event);await connect();
+  return modelOptions(await request('model.options',{session_id:session,explicit_only:true}));
+});
+ipcMain.handle('jarvis:capabilities',async event=>{
+  trusted(event);await connect();
+  const [tools,control]=await Promise.all([
+    request('slash.exec',{session_id:session,command:'/tools'}),
+    request('session.control.read',{session_id:session})
+  ]);
+  return {tools:tools.output||'',control:control.control||{}};
+});
+ipcMain.handle('jarvis:control',async(event,action)=>{
+  trusted(event);
+  if(!['goal.pause','goal.resume','loop.pause','loop.resume','loop.stop','heartbeat.pause','heartbeat.resume'].includes(action))throw Error('Controle inválido.');
+  await connect();return request('session.control',{session_id:session,action});
+});
+let switchingModel=false;
+ipcMain.handle('jarvis:model-select',async(event,id)=>{
+  trusted(event);
+  if(busy||recording||switchingModel||userRequests.size)throw Error('Encerre a voz e aguarde a tarefa atual antes de trocar o modelo.');
+  switchingModel=true;
+  try{
+    await connect();
+    const options=modelOptions(await request('model.options',{session_id:session,explicit_only:true}));
+    const result=await request('config.set',{session_id:session,key:'model',value:modelCommand(id,options)});
+    if(result.confirm_required)throw Error('Este modelo exige uma confirmação adicional do provedor; a troca não foi aplicada.');
+    return {model:result.value||id,deferred:!!result.deferred,warning:result.warning||''};
+  }finally{switchingModel=false;}
+});
 ipcMain.handle('jarvis:send', async (event,text) => {
   trusted(event);
   if (typeof text !== 'string' || !text.trim() || text.length>16000) throw new Error('Pedido inválido ou muito longo.');
-  if (busy) throw new Error('Aguarde a tarefa atual ou interrompa.');
+  if (busy||switchingModel) throw new Error('Aguarde a tarefa ou a troca de modelo atual.');
   await connect(); busy=true;
   try { return await request('prompt.submit',{session_id:session,text:text.trim()}); }
   catch (error) { busy=false; throw error; }
@@ -213,7 +261,7 @@ ipcMain.handle('jarvis:record',async(event,action)=>{
   if(action==='cancel'){recordingSequence++;recording=false;clearTimeout(recordingTimer);if(socket?.readyState!==WebSocket.OPEN)return {enabled:false};return request('voice.toggle',{action:'off'});}
   await connect();
   if(action==='stop'){recording=false;clearTimeout(recordingTimer);return request('voice.record',{action:'stop',session_id:session});}
-  if(busy||recording)throw new Error('Aguarde a tarefa ou a gravação atual.');
+  if(busy||recording||switchingModel)throw new Error('Aguarde a tarefa, a gravação ou a troca de modelo atual.');
   const capture=++recordingSequence;
   await request('voice.toggle',{action:'on'});
   try{

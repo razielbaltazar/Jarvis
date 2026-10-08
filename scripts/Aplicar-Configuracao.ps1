@@ -12,9 +12,12 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\config\SOUL.md') -Destinatio
 $taskSettings = [ordered]@{
     'agent.max_turns' = '10'
     'agent.run_budget_seconds' = '180'
+    # Fail visibly instead of keeping the HUD in a multi-minute recovery ladder.
+    'agent.api_max_retries' = '1'
+    'agent.auto_recovery_cycles' = '0'
     'agent.execution_guidance' = 'true'
     'agent.tool_use_enforcement' = 'false'
-    'platform_toolsets.cli' = '[file, terminal, browser, memory, skills, todo, jarvis_local]'
+    'platform_toolsets.cli' = '[file, terminal, browser, web, memory, skills, todo, session_search, clarify, code_execution, delegation, tts, vision, video, jarvis_local]'
 }
 if ($RestaurarModeloLocal -or -not (Test-Path -LiteralPath (Join-Path $env:HERMES_HOME 'config.yaml'))) {
     $taskSettings['model.default'] = 'jarvis-local'
@@ -29,4 +32,3 @@ foreach ($taskSetting in $taskSettings.GetEnumerator()) {
 & $taskHermes profile rename default Jarvis
 if ($LASTEXITCODE -ne 0) { throw 'Não foi possível definir o nome do perfil.' }
 Write-Host 'Configuração básica Jarvis aplicada. Abra uma nova conversa para usar as mudanças.'
-

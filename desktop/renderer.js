@@ -1,8 +1,15 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let ready=false, busy=false, started=0, activeMessage=null, recording=false, micPending=false, transcribing=false, voiceAvailable=false, lastResponse='', playback=null, speechGeneration=0, synthesizing=false;
-let voiceMode=false, voiceEpoch=0, captureEpoch=0;
+let voiceMode=false, voiceEpoch=0, captureEpoch=0, modelChanging=false;
 const decisions=new Map();
+function friendlyFailure(value){
+ const text=String(value||'A tarefa falhou.');
+ if(/RESOURCE_EXHAUSTED|HTTP 429|quota exceeded|exceeded.*quota/i.test(text))return 'A cota gratuita deste modelo foi atingida. Aguarde a liberação do provedor ou escolha outro modelo no painel Sistema. Seu pedido não foi reenviado.';
+ if(/HTTP 503|UNAVAILABLE|overloaded/i.test(text))return 'O modelo está temporariamente indisponível. Você pode tentar novamente ou escolher outro modelo no painel Sistema.';
+ if(/HTTP 404|NOT_FOUND.*model|model.*no longer available/i.test(text))return 'Este modelo não está disponível para sua conta. Escolha outro no painel Sistema.';
+ return text;
+}
 let queue=[], queuePaused=false, lastEventAt=Date.now();
 try{queue=JSON.parse(localStorage.getItem('jarvis-drafts')||'[]').filter(x=>typeof x.text==='string'&&x.text.length<=16000).slice(0,10);queuePaused=queue.length>0;}catch{}
 function renderQueue(){
@@ -25,7 +32,7 @@ async function submitText(text){
 async function interruptCurrent(){if(recording||transcribing||micPending)await endVoice();stopAudio();if(decisions.size){const item=decisions.values().next().value;if(item.method==='approval'){await window.jarvis.answer(item.id,{choice:'deny'});decisions.delete(item.id);renderDecision();}}if(busy){await window.jarvis.interrupt();log('Interrupção solicitada; aguardando confirmação.');}state(busy?'processing':'ready');}
 setInterval(()=>{if(busy&&Date.now()-lastEventAt>60000){$('reconnect').hidden=false;$('hint').textContent='Sem atualização há um minuto. Você pode interromper ou reconectar.';}},5000);
 const labels={connecting:'CONECTANDO',ready:'PRONTO',processing:'PROCESSANDO',executing:'EXECUTANDO',waiting:'AGUARDANDO SUA RESPOSTA',listening:'OUVINDO',transcribing:'TRANSCREVENDO',speaking:'FALANDO',error:'CONEXÃO INDISPONÍVEL'};
-function state(value){if(decisions.size&&value!=='error')value='waiting';document.body.dataset.state=value;$('status').textContent=labels[value];$('input').disabled=false;$('send').disabled=!ready;$('send').setAttribute('aria-label',busy?'Adicionar pedido à fila':'Enviar pedido');$('stop').hidden=!busy&&!decisions.size;$('mic').disabled=!ready||(!voiceMode&&(busy||transcribing||micPending||!voiceAvailable||!!decisions.size));$('mic').setAttribute('aria-pressed',String(voiceMode));$('mic').textContent=voiceMode?'■':'◉';$('mic').setAttribute('aria-label',voiceMode?'Encerrar conversa por voz':'Iniciar conversa por voz');$('listen').hidden=!lastResponse;$('listen').disabled=busy||recording||transcribing||micPending||!!decisions.size;$('listen').textContent=playback||synthesizing?'Parar áudio':'Ouvir resposta';}
+function state(value){if(decisions.size&&value!=='error')value='waiting';document.body.dataset.state=value;$('status').textContent=labels[value];$('input').disabled=false;$('send').disabled=!ready;$('send').setAttribute('aria-label',busy?'Adicionar pedido à fila':'Enviar pedido');$('stop').hidden=!busy&&!decisions.size;$('mic').disabled=!ready||(!voiceMode&&(busy||modelChanging||transcribing||micPending||!voiceAvailable||!!decisions.size));$('mic').setAttribute('aria-pressed',String(voiceMode));$('mic').textContent=voiceMode?'■':'◉';$('mic').setAttribute('aria-label',voiceMode?'Encerrar conversa por voz':'Iniciar conversa por voz');$('listen').hidden=!lastResponse;$('listen').disabled=busy||recording||transcribing||micPending||!!decisions.size;$('listen').textContent=playback||synthesizing?'Parar áudio':'Ouvir resposta';}
 function renderDecision(){
  const item=decisions.values().next().value;$('decision').hidden=!item;$('decision-content').replaceChildren();if(!item)return;
  const container=$('decision-content');const add=(tag,text)=>{const element=document.createElement(tag);element.textContent=text;container.append(element);return element;};
@@ -60,7 +67,7 @@ function log(text){if($('logs').children.length===1&&$('logs').firstChild.textCo
 function fail(error){queuePaused=true;endVoice();stopAudio();decisions.clear();renderDecision();ready=false;busy=false;recording=false;transcribing=false;state('error');$('reconnect').hidden=false;$('hint').textContent='Não foi possível conectar. Use Reconectar para tentar novamente.';log(error.message||String(error));}
 async function connect(){state('connecting');$('reconnect').hidden=true;try{const result=await window.jarvis.connect();if(Array.isArray(result.messages))$('messages').replaceChildren();for(const row of result.messages||[]){message(row.role==='user'?'user':'assistant',row.text);if(row.role==='assistant')lastResponse=row.text;}ready=true;state(busy?'processing':'ready');if(result.model){$('model').textContent=result.model;document.querySelector('.local').textContent=/gemini/i.test(result.model)?'ONLINE':/jarvis-local|Qwen/i.test(result.model)?'LOCAL':'CONECTADO';}$('hint').textContent='Seu espaço para pensar e construir.';try{const voice=await window.jarvis.voiceStatus();voiceAvailable=!!voice.available;$('voice-info').textContent=voiceAvailable?'Voz local em português · microfone desligado':'Voz indisponível: '+(voice.details||'confira a configuração');state(busy?'processing':'ready');}catch{$('voice-info').textContent='Não foi possível verificar a voz.';}}catch(error){fail(error);}}
 async function resources(){try{const info=await window.jarvis.resources();$('resources').textContent='RAM livre: '+info.memory.free+' / '+info.memory.total+' GB'+(info.gpu?'\nGPU: '+info.gpu+' MB (uso / total)':'\nGPU: leitura indisponível');}catch{$('resources').textContent='Recursos indisponíveis.';}}
-$('form').addEventListener('submit',async event=>{event.preventDefault();const text=$('input').value.trim();if(!text||!ready)return;if(busy||decisions.size){if(enqueue(text))$('input').value='';return;}if(recording||transcribing||micPending){await endVoice();} $('input').value='';await submitText(text);});
+$('form').addEventListener('submit',async event=>{event.preventDefault();const text=$('input').value.trim();if(!text||!ready)return;if(busy||modelChanging||decisions.size){if(enqueue(text))$('input').value='';return;}if(recording||transcribing||micPending){await endVoice();} $('input').value='';await submitText(text);});
 $('input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.ctrlKey){event.preventDefault();const text=$('input').value.trim();if(!text||!ready)return;if(enqueue(text)){$('input').value='';const item=queue.pop();queue.unshift(item);queuePaused=false;renderQueue();if(busy)interruptCurrent().catch(error=>log(error.message));else drainQueue();}}});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();interruptCurrent().catch(error=>log(error.message));}});
 $('stop').addEventListener('click',()=>interruptCurrent().catch(error=>log(error.message)));
@@ -79,12 +86,53 @@ async function recoverVoice(){
  if(!voiceMode||epoch!==voiceEpoch)return;micPending=false;beginListening();
 }
 async function toggleVoice(){
- if(voiceMode){await endVoice();log('Conversa por voz encerrada.');return;}
+ if(modelChanging)return;if(voiceMode){await endVoice();log('Conversa por voz encerrada.');return;}
  if(!voiceAvailable){log('Voz local indisponível.');return;}
  voiceMode=true;voiceEpoch++;log('Conversa por voz ativada. Fale e faça uma pausa; clique novamente para encerrar.');await beginListening();
 }
 $('mic').addEventListener('click',toggleVoice);
 $('reconnect').addEventListener('click',connect);
+async function refreshModels(){
+ $('model-refresh').disabled=true;
+ try{const data=await window.jarvis.models();$('model-choice').replaceChildren();
+  for(const model of data.models||[]){const option=document.createElement('option');option.value=model.id;option.textContent=model.label;option.selected=model.id===data.current;$('model-choice').append(option);}
+  $('model-info').textContent=data.models?.length?'Escolha um modelo para esta conversa. A cota pertence à sua conta Gemini.':'Nenhum modelo compatível disponível. O modelo atual será preservado.';
+ }catch(error){$('model-info').textContent='Não foi possível consultar modelos: '+error.message;}
+ finally{$('model-refresh').disabled=false;}
+}
+$('model-refresh').addEventListener('click',refreshModels);
+async function refreshCapabilities(){
+ $('capabilities-refresh').disabled=true;
+ try{const data=await window.jarvis.capabilities();$('capabilities-tools').textContent=data.tools||'Nenhuma ferramenta disponível nesta sessão.';$('native-controls').replaceChildren();
+  for(const [kind,label] of [['goal','Objetivo'],['loop','Rotina'],['heartbeat','Acompanhamento']]){
+   const item=data.control?.[kind];if(!item)continue;
+   const text=document.createElement('p');text.textContent=label+': '+(item.title||item.prompt||'')+' · '+item.status;$('native-controls').append(text);
+   for(const action of [item.status==='paused'?'resume':'pause',...(kind==='loop'?['stop']:[])]){
+    const button=document.createElement('button');button.textContent=action==='resume'?'Retomar':action==='stop'?'Encerrar':'Pausar';button.addEventListener('click',async()=>{button.disabled=true;try{await window.jarvis.control(kind+'.'+action);await refreshCapabilities();}catch(error){$('capabilities-info').textContent=error.message;button.disabled=false;}});$('native-controls').append(button);
+   }
+  }
+  $('capabilities-info').textContent='Lista informada pelo Hermes. Ferramentas de painéis, projetos e prévias da interface original ainda exigem a interface completa do Hermes. Agenda e serviços externos exigem conexão própria.';
+ }catch(error){$('capabilities-info').textContent='Consulta indisponível: '+error.message;}
+ finally{$('capabilities-refresh').disabled=false;}
+}
+$('capabilities-refresh').addEventListener('click',refreshCapabilities);
+const fullInterfaceButton=document.createElement('button');
+fullInterfaceButton.type='button';fullInterfaceButton.textContent='Abrir interface completa do Hermes';
+fullInterfaceButton.addEventListener('click',async()=>{
+ fullInterfaceButton.disabled=true;
+ try{await window.jarvis.fullInterface();$('capabilities-info').textContent='Abertura solicitada. A interface completa usa suas próprias conversas; o histórico desta janela permanece aqui.';}
+ catch(error){$('capabilities-info').textContent=error.message;}
+ finally{fullInterfaceButton.disabled=false;}
+});
+$('capabilities-refresh').after(fullInterfaceButton);
+$('model-apply').addEventListener('click',async()=>{
+ if(!ready||busy||voiceMode||decisions.size){$('model-info').textContent='Encerre o modo voz e aguarde a tarefa atual para trocar.';return;}
+ const id=$('model-choice').value;if(!id)return;
+ $('model-apply').disabled=true;modelChanging=true;if(queue.length)queuePaused=true;renderQueue();
+ try{const result=await window.jarvis.selectModel(id);$('model').textContent=result.model;document.querySelector('.local').textContent='ONLINE';$('model-info').textContent=result.deferred?'Modelo escolhido para o próximo pedido.':'Modelo aplicado à conversa.';log('Modelo escolhido: '+result.model);}
+ catch(error){$('model-info').textContent='Troca não confirmada: '+error.message;}
+ finally{modelChanging=false;if(queue.length)queuePaused=true;renderQueue();$('model-apply').disabled=false;state(busy?'processing':'ready');}
+});
 async function refreshTasks(){
  try{
   const items=await window.jarvis.tasks('list');$('task-error').textContent='';$('task-items').replaceChildren();
@@ -124,13 +172,13 @@ window.jarvis.onEvent(event=>{
  if(event.type==='voice.timeout'){endVoice();recording=false;transcribing=false;state('ready');log(event.text);}
  if(event.type==='tool.start'){state('executing');log('Executando '+(payload.name||'ferramenta'));}
  if(event.type==='tool.complete'){state('processing');log('Concluído: '+(payload.name||'ferramenta'));}
- if(event.type==='error'){queuePaused=true;busy=false;state('ready');message('assistant',payload.message||'A tarefa falhou.');log('Falha na tarefa; seu pedido não será reenviado automaticamente.');if(voiceMode)recoverVoice();}
+ if(event.type==='error'){queuePaused=true;busy=false;state('ready');message('assistant',friendlyFailure(payload.message));log('Falha na tarefa; seu pedido não será reenviado automaticamente.');if(voiceMode)recoverVoice();}
  if(event.type==='message.delta' && typeof payload.text==='string'){if(!activeMessage)activeMessage=message('assistant','');activeMessage.textContent+=payload.text;$('messages').scrollTop=$('messages').scrollHeight;}
  if(event.type==='message.interim'){if(!payload.already_streamed&&payload.text)message('assistant',payload.text);activeMessage=null;}
  if(event.type==='message.complete'){
   if(payload.status==='error')queuePaused=true;
   if(typeof payload.text==='string'&&payload.text){if(!activeMessage)activeMessage=message('assistant',payload.text);else activeMessage.textContent=payload.text;}
-  if(payload.error)message('assistant',String(payload.error));
+  if(payload.error)message('assistant',friendlyFailure(payload.error));
   if(typeof payload.text==='string'&&payload.text)lastResponse=payload.text;
   busy=false;state('ready');$('latency').textContent=((performance.now()-started)/1000).toFixed(1)+' s';log(payload.status==='error'?'Tarefa terminou com erro':payload.status==='interrupted'?'Tarefa interrompida':'Resposta disponível');activeMessage=null;
   if(queue.length&&!queuePaused&&!decisions.size&&payload.status!=='error'){setTimeout(drainQueue,0);}
