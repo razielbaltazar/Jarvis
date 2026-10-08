@@ -18,7 +18,7 @@ $taskSettings = [ordered]@{
     'agent.run_budget_seconds' = '180'
     'agent.execution_guidance' = 'true'
     'agent.tool_use_enforcement' = 'false'
-    'platform_toolsets.cli' = '[file, terminal, jarvis_local]'
+    'platform_toolsets.cli' = '[file, terminal, browser, memory, skills, todo, jarvis_local]'
 }
 foreach ($taskSetting in $taskSettings.GetEnumerator()) {
     & $taskHermes config set $taskSetting.Key $taskSetting.Value

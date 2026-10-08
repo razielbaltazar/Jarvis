@@ -1,7 +1,7 @@
 param(
     [string]$QueryFile,
     [string]$Workspace,
-    [string[]]$Toolsets = @('file', 'terminal', 'browser', 'jarvis_local'),
+    [string[]]$Toolsets = @('file', 'terminal', 'browser', 'memory', 'skills', 'todo', 'jarvis_local'),
     [switch]$Desktop,
     [switch]$HermesDesktop
 )
