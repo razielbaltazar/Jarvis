@@ -12,7 +12,7 @@ const runtimeEnv = {...process.env,HERMES_HOME:path.join(root,'runtime'),HF_HOME
 app.setAppUserModelId('Jarvis.Desktop');
 const recordDirectory=path.join(os.homedir(),'.local/state/hermes/gateway-locks');
 let win, socket, backend, ownEndpoint, backendFailure='', session, connecting, busy = false, sequence = 0;
-let activeEndpoint, recording=false, recordingTimer;
+let activeEndpoint, recording=false, recordingTimer, recordingSequence=0;
 const pending = new Map();
 const userRequests=new Map();
 const emit = data => { if (win && !win.isDestroyed()) win.webContents.send('jarvis:event', data); };
@@ -112,9 +112,19 @@ async function connect() {
           if (data?.session_id && data.session_id !== session) continue;
           if (data?.type === 'message.complete' || data?.type === 'error') busy=false;
           if(data?.type==='request.cancel'){userRequests.delete(String(data.payload?.id));}
+          if(data?.type==='voice.status'&&['transcribing','processing'].includes(data.payload?.state)){
+            // Cold local STT can exceed the capture deadline; it is no longer recording.
+            clearTimeout(recordingTimer);
+            recordingTimer=setTimeout(()=>{
+              recording=false;request('voice.toggle',{action:'off'}).catch(()=>{});
+              emit({type:'voice.timeout',text:'A transcrição demorou demais. O modo voz foi encerrado; você pode tentar novamente.'});
+            },180000);
+          }
           if (data?.type === 'voice.transcript') {
-            recording=false;clearTimeout(recordingTimer);
-            request('voice.toggle',{action:'off'}).catch(()=>{});
+            recordingSequence++;recording=false;clearTimeout(recordingTimer);
+            // Release the native recorder before the renderer sends or rearms.
+            request('voice.toggle',{action:'off'}).catch(()=>{}).finally(()=>emit(data));
+            continue;
           }
           emit(data);
         }
@@ -200,17 +210,19 @@ ipcMain.handle('jarvis:calendar',(event,options={})=>{
 ipcMain.handle('jarvis:voice-status',async event=>{trusted(event);await connect();return request('voice.toggle',{action:'status'});});
 ipcMain.handle('jarvis:record',async(event,action)=>{
   trusted(event);if(!['start','stop','cancel'].includes(action))throw new Error('Ação de voz inválida.');
-  if(action==='cancel'){recording=false;clearTimeout(recordingTimer);if(socket?.readyState!==WebSocket.OPEN)return {enabled:false};return request('voice.toggle',{action:'off'});}
+  if(action==='cancel'){recordingSequence++;recording=false;clearTimeout(recordingTimer);if(socket?.readyState!==WebSocket.OPEN)return {enabled:false};return request('voice.toggle',{action:'off'});}
   await connect();
   if(action==='stop'){recording=false;clearTimeout(recordingTimer);return request('voice.record',{action:'stop',session_id:session});}
   if(busy||recording)throw new Error('Aguarde a tarefa ou a gravação atual.');
+  const capture=++recordingSequence;
   await request('voice.toggle',{action:'on'});
   try{
     const result=await request('voice.record',{action:'start',session_id:session});
+    if(capture!==recordingSequence)return result;
     recording=result.status==='recording';
     if(!recording){await request('voice.toggle',{action:'off'});throw new Error('Microfone ocupado.');}
     clearTimeout(recordingTimer);recordingTimer=setTimeout(()=>{
-      recording=false;request('voice.toggle',{action:'off'}).catch(()=>{});
+      recordingSequence++;recording=false;request('voice.toggle',{action:'off'}).catch(()=>{});
       emit({type:'voice.timeout',text:'Gravação encerrada. Tente novamente.'});
     },45000);
     return result;

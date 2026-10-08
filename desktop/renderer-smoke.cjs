@@ -24,6 +24,7 @@ app.whenReady().then(async()=>{
  await evaluate("document.getElementById('mic').click()");await sleep(70);
  await event('voice.transcript',{text:'Fala atrasada'});
  assert.equal((await evaluate('window.jarvis.testState().sends')).length,1);
+ assert.equal(await evaluate("document.getElementById('input').value"),'');
  await evaluate("document.getElementById('input').value='quero conversar por voz';document.getElementById('form').requestSubmit()");await sleep(70);
  assert.equal(await evaluate('document.body.dataset.state'),'listening');
  await evaluate("document.getElementById('mic').click()");await sleep(70);
@@ -62,6 +63,28 @@ app.whenReady().then(async()=>{
  assert.equal(await evaluate("document.getElementById('system').hidden"),true);
  assert.equal(await evaluate("document.querySelector('#calendar-items img')"),null);
  assert.ok(await evaluate("document.getElementById('calendar-items').textContent.includes('01/01/2099')"));
- const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'compacto.png'),(await win.webContents.capturePage()).toPNG());fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true,inputAvailableDuringTask:true,queuedSendSerialized:true,interruptWaitsForCompletion:true,queueEditing:true,draftSurvivesDisconnect:true,compactPanelsDoNotOverlapComposer:true,calendarLiveResultsRenderedSafely:true},null,2));
+ // Native transcription can arrive before the start RPC reply; it must submit once.
+ await evaluate("document.getElementById('reconnect').click()");await sleep(70);
+ await evaluate("document.querySelectorAll('#queue .queued button:last-child').forEach(button=>button.click())");
+ await evaluate("window.jarvis.deferStart();document.getElementById('mic').click()");await sleep(40);
+ await event('voice.status',{state:'transcribing'});
+ await event('voice.transcript',{text:'Pedido antes da confirmação'});
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Pedido antes da confirmação');
+ await evaluate('window.jarvis.resolveStart()');await sleep(70);
+ assert.equal(await evaluate('document.body.dataset.state'),'processing');
+ await event('message.complete',{status:'error',error:'Modelo temporariamente indisponível'});
+ assert.equal(await evaluate('document.body.dataset.state'),'listening');
+ await event('voice.transcript',{no_speech_limit:true});
+ assert.equal(await evaluate('document.body.dataset.state'),'listening');
+ await event('voice.transcript',{text:'Nova pergunta após falha'});
+ assert.equal((await evaluate('window.jarvis.testState().sends')).at(-1),'Nova pergunta após falha');
+ await event('error',{message:'Falha temporária do modelo'});
+ await sleep(70);assert.equal(await evaluate('document.body.dataset.state'),'listening');
+ await evaluate('window.jarvis.failNextSend()');
+ await event('voice.transcript',{text:'Pedido com falha de envio'});await sleep(70);
+ assert.equal(await evaluate('document.body.dataset.state'),'listening');
+ assert.ok(await evaluate("document.getElementById('queue').textContent.includes('Pedido com falha de envio')"));
+ await evaluate("document.getElementById('mic').click()");
+ const output=process.env.JARVIS_CHECK_OUTPUT;fs.mkdirSync(output,{recursive:true});fs.writeFileSync(path.join(output,'compacto.png'),(await win.webContents.capturePage()).toPNG());fs.writeFileSync(path.join(output,'renderer-resultado.json'),JSON.stringify({microphoneOffAtStartup:true,automaticVoiceSubmit:true,automaticPlayback:true,rearmsAfterPlayback:true,microphonePausedDuringPlayback:true,stopDuringTranscription:true,lateTranscriptNotSent:true,textCommandStartsVoice:true,staleAudioCannotResetTask:true,approvalEscaped:true,inputAvailableDuringTask:true,queuedSendSerialized:true,interruptWaitsForCompletion:true,queueEditing:true,draftSurvivesDisconnect:true,compactPanelsDoNotOverlapComposer:true,calendarLiveResultsRenderedSafely:true,earlyTranscriptSubmittedOnce:true,lateTranscriptIgnoredAfterStop:true,silenceRearmsListening:true,modelFailureRearmsListening:true},null,2));
  win.close();app.quit();
 }).catch(error=>{console.error(error.stack);app.exit(1);});

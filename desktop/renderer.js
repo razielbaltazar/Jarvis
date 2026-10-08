@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let ready=false, busy=false, started=0, activeMessage=null, recording=false, micPending=false, transcribing=false, voiceAvailable=false, lastResponse='', playback=null, speechGeneration=0, synthesizing=false;
-let voiceMode=false, voiceEpoch=0;
+let voiceMode=false, voiceEpoch=0, captureEpoch=0;
 const decisions=new Map();
 let queue=[], queuePaused=false, lastEventAt=Date.now();
 try{queue=JSON.parse(localStorage.getItem('jarvis-drafts')||'[]').filter(x=>typeof x.text==='string'&&x.text.length<=16000).slice(0,10);queuePaused=queue.length>0;}catch{}
@@ -20,7 +20,7 @@ async function submitText(text){
  if(!ready||busy||decisions.size||recording||transcribing||micPending){enqueue(text);return;}
  if(/^((ative|ativar|ligue|habilite|inicie)( o)? modo( de)? voz|ligar( o)? modo( de)? voz|quero (falar|conversar) por voz|vamos (falar|conversar) por voz)[.!?]*$/i.test(text)){await toggleVoice();return;}
  stopAudio();busy=true;started=performance.now();lastEventAt=Date.now();message('user',text);activeMessage=null;panel('conversation',true);state('processing');log('Pedido enviado');
- try{await window.jarvis.send(text);}catch(error){busy=false;queuePaused=true;enqueue(text);state('ready');message('assistant','O pedido não foi confirmado: '+error.message);log('Pedido guardado na fila. Confira antes de reenviar.');}
+ try{await window.jarvis.send(text);}catch(error){busy=false;queuePaused=true;enqueue(text);state('ready');message('assistant','O pedido não foi confirmado: '+error.message);log('Pedido guardado na fila. Confira antes de reenviar.');if(voiceMode)recoverVoice();}
 }
 async function interruptCurrent(){if(recording||transcribing||micPending)await endVoice();stopAudio();if(decisions.size){const item=decisions.values().next().value;if(item.method==='approval'){await window.jarvis.answer(item.id,{choice:'deny'});decisions.delete(item.id);renderDecision();}}if(busy){await window.jarvis.interrupt();log('Interrupção solicitada; aguardando confirmação.');}state(busy?'processing':'ready');}
 setInterval(()=>{if(busy&&Date.now()-lastEventAt>60000){$('reconnect').hidden=false;$('hint').textContent='Sem atualização há um minuto. Você pode interromper ou reconectar.';}},5000);
@@ -65,13 +65,18 @@ $('input').addEventListener('keydown',event=>{if(event.key==='Enter'&&event.ctrl
 document.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();interruptCurrent().catch(error=>log(error.message));}});
 $('stop').addEventListener('click',()=>interruptCurrent().catch(error=>log(error.message)));
 $('listen').addEventListener('click',()=>{if(playback||synthesizing){stopAudio();state('ready');}else speak(lastResponse);});
-async function endVoice(){voiceMode=false;voiceEpoch++;recording=false;transcribing=false;micPending=false;stopAudio();try{await window.jarvis.record('cancel');}catch{}state(!ready?'error':busy?'processing':'ready');}
+async function endVoice(){voiceMode=false;voiceEpoch++;captureEpoch++;recording=false;transcribing=false;micPending=false;stopAudio();try{await window.jarvis.record('cancel');}catch{}state(!ready?'error':busy?'processing':'ready');}
 async function beginListening(){
- if(!voiceMode||busy||playback||synthesizing||decisions.size)return;
- const epoch=voiceEpoch;micPending=true;state('processing');
- try{await window.jarvis.record('start');if(!voiceMode||epoch!==voiceEpoch){await window.jarvis.record('cancel');return;}recording=true;state('listening');}
+ if(!ready||!voiceMode||busy||playback||synthesizing||decisions.size||recording||transcribing||micPending)return;
+ const epoch=voiceEpoch,capture=++captureEpoch;micPending=true;state('processing');
+ try{await window.jarvis.record('start');if(!voiceMode||epoch!==voiceEpoch){await window.jarvis.record('cancel');return;}if(capture!==captureEpoch)return;recording=true;state('listening');}
  catch(error){endVoice();log('Microfone: '+error.message);}
- finally{if(epoch===voiceEpoch){micPending=false;state(recording?'listening':busy?'processing':'ready');}}
+ finally{if(epoch===voiceEpoch&&capture===captureEpoch){micPending=false;state(recording?'listening':busy?'processing':'ready');}}
+}
+async function recoverVoice(){
+ if(!voiceMode)return;const epoch=voiceEpoch;captureEpoch++;recording=false;transcribing=false;micPending=true;stopAudio();
+ try{await window.jarvis.record('cancel');}catch{}
+ if(!voiceMode||epoch!==voiceEpoch)return;micPending=false;beginListening();
 }
 async function toggleVoice(){
  if(voiceMode){await endVoice();log('Conversa por voz encerrada.');return;}
@@ -108,16 +113,18 @@ window.jarvis.onEvent(event=>{
  if(event.type==='tasks.due')$('tasks-toggle').textContent=payload.count?'Tarefas · '+payload.count+' pendente(s)':'Tarefas';
  if(event.type==='user.request'){stopAudio();decisions.set(payload.id,payload);renderDecision();state('waiting');log('Pedido de resposta pendente.');}
  if(event.type==='request.cancel'){decisions.delete(String(payload.id));renderDecision();state(busy?'processing':'ready');}
- if(event.type==='voice.status'&&['transcribing','processing'].includes(payload.state)){recording=false;transcribing=true;state('transcribing');}
+ if(event.type==='voice.status'&&voiceMode&&['transcribing','processing'].includes(payload.state)){recording=false;transcribing=true;state('transcribing');}
  if(event.type==='voice.transcript'){
-  recording=false;transcribing=false;state('ready');
-  if(payload.text&&!payload.stop_phrase){if(voiceMode)submitText(payload.text);else if(!$('input').value.trim()){$('input').value=payload.text;$('input').focus();log('Transcrição disponível para revisar e enviar.');}else{enqueue(payload.text);queuePaused=true;log('Transcrição guardada sem substituir seu texto.');}}
-  else{endVoice();log('Conversa por voz encerrada: silêncio ou pedido de parada.');}
+  if(!voiceMode)return;
+  captureEpoch++;recording=false;transcribing=false;micPending=false;state('ready');
+  if(payload.stop_phrase){endVoice();log('Conversa por voz encerrada por seu pedido.');}
+  else if(payload.text){submitText(payload.text);}
+  else{log('Nenhuma fala detectada. Continuo ouvindo.');beginListening();}
  }
  if(event.type==='voice.timeout'){endVoice();recording=false;transcribing=false;state('ready');log(event.text);}
  if(event.type==='tool.start'){state('executing');log('Executando '+(payload.name||'ferramenta'));}
  if(event.type==='tool.complete'){state('processing');log('Concluído: '+(payload.name||'ferramenta'));}
- if(event.type==='error'){queuePaused=true;endVoice();busy=false;state('ready');message('assistant',payload.message||'A tarefa falhou.');log('Falha na tarefa');}
+ if(event.type==='error'){queuePaused=true;busy=false;state('ready');message('assistant',payload.message||'A tarefa falhou.');log('Falha na tarefa; seu pedido não será reenviado automaticamente.');if(voiceMode)recoverVoice();}
  if(event.type==='message.delta' && typeof payload.text==='string'){if(!activeMessage)activeMessage=message('assistant','');activeMessage.textContent+=payload.text;$('messages').scrollTop=$('messages').scrollHeight;}
  if(event.type==='message.interim'){if(!payload.already_streamed&&payload.text)message('assistant',payload.text);activeMessage=null;}
  if(event.type==='message.complete'){
@@ -128,7 +135,7 @@ window.jarvis.onEvent(event=>{
   busy=false;state('ready');$('latency').textContent=((performance.now()-started)/1000).toFixed(1)+' s';log(payload.status==='error'?'Tarefa terminou com erro':payload.status==='interrupted'?'Tarefa interrompida':'Resposta disponível');activeMessage=null;
   if(queue.length&&!queuePaused&&!decisions.size&&payload.status!=='error'){setTimeout(drainQueue,0);}
   else if((voiceMode||$('auto-speak').checked)&&payload.status!=='error'&&payload.status!=='interrupted'&&lastResponse)speak(lastResponse.slice(0,4000));
-  else if(voiceMode){if(payload.status==='error'||payload.status==='interrupted')endVoice();else beginListening();}
+  else if(voiceMode){if(payload.status==='interrupted')endVoice();else beginListening();}
   if(!$('tasks').hidden)refreshTasks();
  }
 });
