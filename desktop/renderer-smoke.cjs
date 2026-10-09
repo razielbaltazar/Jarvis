@@ -4,8 +4,11 @@ app.setPath('userData',path.join(app.getPath('temp'),'jarvis-renderer-check-'+pr
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
  const win=new BrowserWindow({show:false,webPreferences:{preload:path.join(__dirname,'test-preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+ win.webContents.on('console-message',event=>console.error('Renderer:',event.message));
  await win.loadFile(path.join(__dirname,'index.html'));await sleep(300);
  const evaluate=code=>win.webContents.executeJavaScript(code);
+ const nativeButton=await evaluate("Array.from(document.querySelectorAll('button')).some(x=>x.textContent==='Abrir interface completa do Hermes')");
+ assert.ok(nativeButton,'Native interface button missing');
  await evaluate("Array.from(document.querySelectorAll('button')).find(x=>x.textContent==='Abrir interface completa do Hermes').click()");await sleep(70);
  assert.ok(await evaluate("document.getElementById('capabilities-info').textContent.includes('próprias conversas')"));
  const event=async(type,payload)=>{win.webContents.send('jarvis:test-event',{type,payload});await sleep(70);};
@@ -67,8 +70,8 @@ app.whenReady().then(async()=>{
  win.setSize(720,600);await sleep(100);
  await evaluate("document.getElementById('tasks-toggle').click();document.getElementById('system-toggle').click()");
  assert.equal(await evaluate("document.getElementById('tasks').hidden"),true);
- const bounds=await evaluate("(()=>{const p=document.getElementById('system').getBoundingClientRect(),c=document.querySelector('.composer').getBoundingClientRect();return {panelBottom:p.bottom,composerTop:c.top};})()");
- assert.ok(bounds.panelBottom<=bounds.composerTop,'Compact panel covers composer');
+ const overlaps=await evaluate("(()=>{const p=document.getElementById('system').getBoundingClientRect(),c=document.querySelector('.composer-wrap').getBoundingClientRect();return !(p.right<=c.left||p.left>=c.right||p.bottom<=c.top||p.top>=c.bottom);})()");
+ assert.equal(overlaps,false,'Context panel covers composer');
  await evaluate("document.getElementById('calendar-toggle').click()");await sleep(70);
  assert.equal(await evaluate("document.getElementById('system').hidden"),true);
  assert.equal(await evaluate("document.querySelector('#calendar-items img')"),null);

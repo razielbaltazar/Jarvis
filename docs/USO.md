@@ -1,6 +1,6 @@
 # Usar o Jarvis
 
-Abra o atalho Jarvis ou execute scripts/Iniciar-Jarvis.ps1 -Desktop. Aguarde a conexão ficar pronta. Digite no campo inferior e pressione Enter. Clique em Conversa ou na orbe para abrir o histórico. Interromper solicita cancelamento; Reconectar aparece quando a conexão falha.
+Abra o atalho Jarvis ou execute scripts/Iniciar-Jarvis.ps1 -Desktop. Aguarde a conexão ficar pronta. A barra lateral abre conversa, tarefas, agenda, atividade e sistema; o painel direito mostra o contexto da sessão. Digite no campo inferior e pressione Enter. Interromper solicita cancelamento; Reconectar aparece quando a conexão falha.
 
 O aplicativo usa Hermes com Qwen3.5-2B Q4_K_M local. Não exige API paga. A última conversa da mesma pasta é retomada ao reabrir. O modelo pequeno pode errar fatos ou confirmar ações que não executou; resultados importantes precisam de conferência.
 
@@ -16,7 +16,7 @@ Agenda Google/Apple ainda não conectada. Nenhum módulo de WhatsApp ou rede soc
 ## Pastas e recuperação
 scripts/Novo-Projeto.ps1 cria workspace/projetos/<nome>, com orientação e registro, sem sobrescrever projeto existente. Use -Workspace '<caminho>' no iniciador para trabalhar nela. Sem -Desktop, abre CLI; -QueryFile executa um pedido de arquivo de texto. Os toolsets CLI padrão são file, terminal, jarvis_local.
 
--HermesDesktop conserva a interface original como alternativa. A versão Jarvis usa Electron já instalado; empacotamento independente fica para depois. Fechar o aplicativo encerra o motor que o próprio iniciador criou, preservando servidores externos.
+-HermesDesktop conserva a interface original como alternativa para painéis ainda não incorporados ao HUD. O painel Sistema também oferece esse acesso e informa que as conversas são separadas. A versão Jarvis usa Electron já instalado; empacotamento independente fica para a etapa comercial. Fechar o aplicativo encerra somente o motor que o próprio iniciador criou, preservando servidores externos.
 
 Aplicar-Configuracao.ps1 reproduz modelo e ferramentas; Configurar-Voz.ps1 configura voz; Instalar-Extensoes.ps1 instala a extensão de registros pelo mecanismo nativo. Não reinstale a cada abertura. Leia docs/ESTADO.md antes de continuar desenvolvimento. Barreira atual do assistente de desenvolvimento: 25% restantes; isso não limita o modelo local.
 
@@ -29,6 +29,10 @@ Você pode digitar enquanto o Jarvis trabalha. Enter guarda na fila; Enviar agor
 O modelo padrão atual é Gemini 3.1 Flash-Lite, que precisa de internet. O Qwen local continua instalado. A chave fica somente no ambiente privado.
 
 O atalho Jarvis está na área de trabalho. No painel Sistema, ONLINE indica Gemini; LOCAL indica o modelo local. Se um registro estiver em uso, espere e tente novamente. Se o aviso persistir após falha do programa, preserve os dados e solicite recuperação do bloqueio.
+
+## Backup dos registros
+
+`scripts/Backup-Dados-Jarvis.ps1 -Workspace '<pasta>'` cria um arquivo ZIP em `outputs/backups`. Ele inclui tarefas, notas e lembretes, sem conversas ou credenciais. `scripts/Restaurar-Dados-Jarvis.ps1 -Arquivo '<backup.zip>' -Workspace '<pasta>'` restaura somente em uma pasta sem registros; use `-Substituir` de forma explícita quando já houver dados. Antes de substituir, o script preserva uma cópia com data e hora.
 
 ## Agenda local
 Abra Agenda para consultar a cópia importada do Google. Ative Mostrar compromissos anteriores para ver eventos passados. A data de importação aparece no painel. Mudanças feitas no Google não atualizam essa cópia automaticamente. Não há edição Google por esse painel; eventos recorrentes ainda exigem consulta à agenda original.

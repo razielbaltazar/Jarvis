@@ -1,6 +1,7 @@
 const {app, BrowserWindow, ipcMain,Notification,nativeImage} = require('electron');
 const {createTaskStore}=require('./task-store.cjs');
 const {modelOptions,modelCommand}=require('./model-controls.cjs');
+const {capabilityInventory}=require('./capability-inventory.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
@@ -189,7 +190,7 @@ ipcMain.handle('jarvis:capabilities',async event=>{
     request('slash.exec',{session_id:session,command:'/tools'}),
     request('session.control.read',{session_id:session})
   ]);
-  return {tools:tools.output||'',control:control.control||{}};
+  return {tools:tools.output||'',inventory:capabilityInventory(tools.output),control:control.control||{}};
 });
 ipcMain.handle('jarvis:control',async(event,action)=>{
   trusted(event);
